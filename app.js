@@ -286,12 +286,30 @@ const WORKSPACE_CHART_TABS = [
   { id: 'commits', label: 'Commits' },
 ];
 
-const WORKSPACE_STATUS_COLORS = {
-  backlog: '#5c6070',
-  inProgress: '#3b82f6',
-  review: '#f97316',
-  closed: '#2dd4bf',
+const WORKSPACE_STATUS_COLORS_BY_THEME = {
+  dark: {
+    backlog: '#5c6070',
+    inProgress: '#3b82f6',
+    review: '#f97316',
+    closed: '#2dd4bf',
+  },
+  light: {
+    backlog: '#8b919c',
+    inProgress: '#2563eb',
+    review: '#ea580c',
+    closed: '#0d9488',
+  },
 };
+
+const THEME_STORAGE_KEY = 'studio-theme';
+
+function getTheme() {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+}
+
+function workspaceStatusColors() {
+  return WORKSPACE_STATUS_COLORS_BY_THEME[getTheme()];
+}
 
 function workspaceTeamScale(memberCount = 3, repos = 2) {
   return memberCount * 18 + repos * 6;
@@ -423,6 +441,8 @@ let activeSimulatedTaskId = null;
 let completionPauseTimer = null;
 let pendingCompletionTaskId = null;
 let activeDiffFileIndex = 0;
+let activeDiffCommitIndex = 0;
+let activeChangesFilter = 'uncommitted';
 let workspaceStatsMenuAnchor = null;
 let workspaceStatsMenuType = null;
 let snackbarTimer = null;
@@ -959,6 +979,65 @@ function getTaskDiffBundle(task) {
   );
 }
 
+function countFileLineStats(lines = []) {
+  return lines.reduce(
+    (stats, line) => {
+      if (line.type === 'add') stats.additions += 1;
+      if (line.type === 'del') stats.deletions += 1;
+      return stats;
+    },
+    { additions: 0, deletions: 0 },
+  );
+}
+
+function countCommitStats(files = []) {
+  return files.reduce(
+    (stats, file) => {
+      const fileStats = countFileLineStats(file.lines);
+      stats.additions += fileStats.additions;
+      stats.deletions += fileStats.deletions;
+      return stats;
+    },
+    { additions: 0, deletions: 0 },
+  );
+}
+
+function deriveOlderCommitFiles(files, commitIndex) {
+  if (!files?.length) return [];
+
+  if (commitIndex === 1 && files.length > 1) {
+    return [files[files.length - 1]];
+  }
+
+  const file = files[0];
+  const ratio = Math.max(0.25, 0.55 - commitIndex * 0.12);
+  const reduced = file.lines.filter((line, index) => {
+    if (line.type === 'collapse') return false;
+    if (line.type === 'ctx' || line.type === 'del') return true;
+    return index < Math.max(3, Math.floor(file.lines.length * ratio));
+  });
+
+  return [{
+    path: file.path,
+    lines: reduced.length ? reduced : file.lines.slice(0, Math.min(4, file.lines.length)),
+  }];
+}
+
+function getDiffCommits(bundle, task) {
+  const authorName = task?.agentId ? getAgent(task.agentId).name.split(' ')[0] : 'Kimchi';
+
+  return bundle.gitLog.map((entry, index) => ({
+    hash: entry.hash,
+    message: entry.message,
+    time: entry.time,
+    author: entry.author || authorName,
+    isHead: index === 0,
+    files: entry.files || (index === 0
+      ? bundle.files
+      : deriveOlderCommitFiles(bundle.files, index)),
+  }));
+}
+
 function renderDiffLines(lines) {
   return lines
     .map((line) => {
@@ -973,37 +1052,240 @@ function renderDiffLines(lines) {
     .join('');
 }
 
+function getBranchChangesSelection(bundle, commits) {
+  const head = commits[0];
+  const oldest = bundle.gitLog[bundle.gitLog.length - 1];
+  const baseHash = bundle.baseHash
+    || (bundle.gitLog.length > 1 ? oldest?.hash : '6bff18b6');
+  const headHash = head?.hash || '0000000';
+
+  return {
+    isBranchSummary: true,
+    message: 'All branch changes',
+    range: `${baseHash}..${headHash}`,
+    author: head?.author || 'Kimchi',
+    time: `${bundle.gitLog.length} commit${bundle.gitLog.length === 1 ? '' : 's'}`,
+    files: bundle.files,
+  };
+}
+
+function getWorkingTreePartition(bundle, task) {
+  const all = bundle.files || [];
+  if (!all.length) return { uncommitted: [], staged: [] };
+
+  if (task.status === 'review' || task.status === 'closed') {
+    return { uncommitted: all, staged: all };
+  }
+
+  if (task.status === 'in-progress') {
+    const staged = all.length > 1 ? [all[0]] : [];
+    const uncommitted = all;
+    return { uncommitted, staged };
+  }
+
+  return { uncommitted: all, staged: [] };
+}
+
+function getFilesForChangesFilter(bundle, commits, task) {
+  const partition = getWorkingTreePartition(bundle, task);
+
+  if (activeChangesFilter === 'uncommitted') return partition.uncommitted;
+  if (activeChangesFilter === 'staged') return partition.staged;
+  if (activeChangesFilter === 'branch') {
+    return getBranchChangesSelection(bundle, commits).files || [];
+  }
+  if (activeChangesFilter === 'commit') {
+    const safeCommitIndex = Math.min(activeDiffCommitIndex, Math.max(commits.length - 1, 0));
+    activeDiffCommitIndex = safeCommitIndex;
+    return commits[safeCommitIndex]?.files || [];
+  }
+
+  return [];
+}
+
+function changesScopeTriggerLabel(filter, partition) {
+  if (filter === 'uncommitted') {
+    const count = partition.uncommitted.length;
+    if (!count) return 'Uncommitted';
+    return `${count} Uncommitted Change${count === 1 ? '' : 's'}`;
+  }
+  if (filter === 'staged') {
+    const count = partition.staged.length;
+    if (!count) return 'Staged';
+    return `${count} Staged Change${count === 1 ? '' : 's'}`;
+  }
+  return 'All branch changes';
+}
+
+function renderChangesToolbar(bundle, commits, task) {
+  const branchEl = $('#diff-branch-name');
+  const trigger = $('#diff-commit-trigger');
+  const menu = $('#diff-commit-menu');
+  const totalsEl = $('#diff-change-totals');
+  const branchSelection = getBranchChangesSelection(bundle, commits);
+  const partition = getWorkingTreePartition(bundle, task);
+  const files = getFilesForChangesFilter(bundle, commits, task);
+  const stats = countCommitStats(files);
+  const safeCommitIndex = Math.min(activeDiffCommitIndex, Math.max(commits.length - 1, 0));
+  const selectedCommit = commits[safeCommitIndex];
+
+  if (branchEl) branchEl.textContent = bundle.branch;
+
+  const bylineEl = $('#diff-commit-byline');
+  if (bylineEl) {
+    if (activeChangesFilter === 'branch') {
+      bylineEl.textContent = `${branchSelection.time} · ${branchSelection.range}`;
+    } else if (activeChangesFilter === 'commit' && selectedCommit) {
+      bylineEl.textContent = `${selectedCommit.author} · ${selectedCommit.time}`;
+    } else {
+      bylineEl.textContent = '';
+    }
+  }
+
+  if (totalsEl) {
+    totalsEl.innerHTML = stats.additions || stats.deletions
+      ? `<span class="diff-stat-add">+${stats.additions}</span><span class="diff-stat-del">−${stats.deletions}</span>`
+      : '';
+  }
+
+  if (trigger) {
+    if (activeChangesFilter === 'commit' && selectedCommit) {
+      trigger.innerHTML = `
+      <span class="changes-commit-trigger-hash">${selectedCommit.hash}</span>
+      <span class="changes-commit-trigger-msg">${escapeHtml(selectedCommit.message)}</span>
+      ${selectedCommit.isHead ? '<span class="changes-head-badge">HEAD</span>' : ''}
+      <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>`;
+    } else if (activeChangesFilter === 'branch') {
+      trigger.innerHTML = `
+      <span class="changes-commit-trigger-msg">${branchSelection.message}</span>
+      <span class="changes-commit-trigger-range">${branchSelection.range}</span>
+      <span class="changes-head-badge">HEAD</span>
+      <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>`;
+    } else {
+      trigger.innerHTML = `
+      <span class="changes-commit-trigger-msg">${changesScopeTriggerLabel(activeChangesFilter, partition)}</span>
+      <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>`;
+    }
+    trigger.setAttribute('aria-expanded', menu && !menu.hidden ? 'true' : 'false');
+  }
+
+  if (menu) {
+    const scopeOptions = [
+      {
+        scope: 'uncommitted',
+        label: 'Uncommitted',
+        count: partition.uncommitted.length,
+      },
+      {
+        scope: 'staged',
+        label: 'Staged',
+        count: partition.staged.length,
+      },
+      {
+        scope: 'branch',
+        label: 'All branch changes',
+        range: branchSelection.range,
+      },
+    ];
+
+    menu.innerHTML = `
+      ${scopeOptions.map((option) => {
+        const selected = activeChangesFilter === option.scope;
+        return `
+        <button
+          type="button"
+          class="changes-commit-option changes-commit-option--scope${selected ? ' selected' : ''}"
+          role="option"
+          data-scope="${option.scope}"
+          aria-selected="${selected}"
+        >
+          <span class="changes-commit-option-msg">${option.label}</span>
+          ${option.count ? `<span class="changes-commit-option-count">${option.count}</span>` : ''}
+          ${option.range ? `<span class="changes-commit-option-range">${option.range}</span>` : ''}
+          ${option.scope === 'branch' ? '<span class="changes-head-badge">HEAD</span>' : ''}
+          ${selected ? '<span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>' : ''}
+        </button>`;
+      }).join('')}
+      <div class="changes-commit-menu-divider changes-commit-menu-divider--commits" role="separator" aria-hidden="true"></div>
+      <div class="changes-commit-menu-commits">
+      ${commits.map((commit, index) => {
+        const selected = activeChangesFilter === 'commit' && index === safeCommitIndex;
+        return `
+        <button
+          type="button"
+          class="changes-commit-option${selected ? ' selected' : ''}"
+          role="option"
+          data-scope="commit"
+          data-commit-index="${index}"
+          aria-selected="${selected}"
+        >
+          <span class="changes-commit-option-hash">${commit.hash}</span>
+          <span class="changes-commit-option-msg">${escapeHtml(commit.message)}</span>
+          <span class="changes-commit-option-author">${escapeHtml(commit.author)}</span>
+          <span class="changes-commit-option-time">${escapeHtml(commit.time)}</span>
+          ${commit.isHead ? '<span class="changes-head-badge">HEAD</span>' : ''}
+          ${selected ? '<span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>' : ''}
+        </button>`;
+      }).join('')}
+      </div>`;
+
+    menu.style.minWidth = '280px';
+  }
+
+  initIcons($('#changes-toolbar'));
+}
+
 function renderDiff() {
   const fileTree = $('#diff-file-tree');
   const viewer = $('#diff-viewer');
   const terminal = $('#task-terminal-output');
-  const gitLog = $('#task-git-log');
+  const header = $('#changes-header');
   const task = getTask(activeTaskId);
 
   if (!fileTree || !viewer) return;
 
   if (!task || task.status === 'backlog') {
+    if (header) header.hidden = true;
+    const bylineEl = $('#diff-commit-byline');
+    if (bylineEl) bylineEl.textContent = '';
     fileTree.innerHTML = '';
     viewer.innerHTML = task
       ? '<div class="diff-empty">No file changes yet. Start the task to see agent edits.</div>'
       : '';
     if (terminal) terminal.textContent = '';
-    if (gitLog) gitLog.innerHTML = '';
     return;
   }
 
   const bundle = getTaskDiffBundle(task);
-  const safeIndex = Math.min(activeDiffFileIndex, Math.max(bundle.files.length - 1, 0));
+  const commits = getDiffCommits(bundle, task);
+  const files = getFilesForChangesFilter(bundle, commits, task);
+
+  if (header) header.hidden = false;
+  renderChangesToolbar(bundle, commits, task);
+
+  const safeIndex = Math.min(activeDiffFileIndex, Math.max(files.length - 1, 0));
   activeDiffFileIndex = safeIndex;
 
-  fileTree.innerHTML = bundle.files
-    .map(
-      (file, index) => `
+  if (!files.length) {
+    fileTree.innerHTML = '';
+    viewer.innerHTML = '<div class="diff-empty">No changes in this view.</div>';
+    if (terminal) terminal.textContent = bundle.terminal;
+    return;
+  }
+
+  fileTree.innerHTML = files
+    .map((file, index) => {
+      const fileStats = countFileLineStats(file.lines);
+      return `
     <div class="file-tree-item${index === safeIndex ? ' active' : ''}" data-file-index="${index}">
       <span class="icon-slot" data-icon="file" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
-      <span>${escapeHtml(file.path)}</span>
-    </div>`,
-    )
+      <span class="file-tree-path">${escapeHtml(file.path)}</span>
+      <span class="file-tree-stats">
+        ${fileStats.additions ? `<span class="diff-stat-add">+${fileStats.additions}</span>` : ''}
+        ${fileStats.deletions ? `<span class="diff-stat-del">−${fileStats.deletions}</span>` : ''}
+      </span>
+    </div>`;
+    })
     .join('');
 
   initIcons(fileTree);
@@ -1014,17 +1296,138 @@ function renderDiff() {
     });
   });
 
-  viewer.innerHTML = renderDiffLines(bundle.files[safeIndex]?.lines || []);
-
+  viewer.innerHTML = renderDiffLines(files[safeIndex]?.lines || []);
   if (terminal) terminal.textContent = bundle.terminal;
-  if (gitLog) {
-    gitLog.innerHTML = bundle.gitLog
-      .map(
-        (entry) =>
-          `<div class="git-entry"><span class="git-hash">${entry.hash}</span> ${escapeHtml(entry.message)} <span class="git-time">${escapeHtml(entry.time)}</span></div>`,
-      )
-      .join('');
+  renderBrowserPreview();
+}
+
+function getTaskBrowserPreview(task) {
+  if (!task || task.status === 'backlog') {
+    return { available: false };
   }
+
+  const slug = taskBranchSlug(task);
+
+  if (task.repo === 'backend') {
+    return {
+      available: true,
+      url: 'http://localhost:4000/docs#/tags/budgets',
+      src: '/previews/api-docs.html',
+    };
+  }
+
+  if (task.repo === 'design') {
+    return {
+      available: true,
+      url: `http://localhost:5173/proto/budgets/${slug}`,
+      src: '/previews/budgets-proto.html',
+    };
+  }
+
+  return {
+    available: true,
+    url: 'http://localhost:3000/budgets',
+    src: '/previews/budgets-dashboard.html',
+  };
+}
+
+function renderBrowserPreview() {
+  const task = getTask(activeTaskId);
+  const urlEl = $('#browser-preview-url');
+  const frame = $('#browser-preview-frame');
+  const empty = $('#browser-preview-empty');
+  const toolbar = $('#browser-toolbar');
+
+  if (!frame) return;
+
+  if (!task || task.status === 'backlog') {
+    if (urlEl) urlEl.textContent = '';
+    frame.hidden = true;
+    frame.removeAttribute('src');
+    frame.dataset.src = '';
+    if (empty) empty.hidden = false;
+    if (toolbar) toolbar.hidden = true;
+    initIcons(empty);
+    return;
+  }
+
+  const preview = getTaskBrowserPreview(task);
+  if (toolbar) toolbar.hidden = false;
+  if (urlEl) urlEl.textContent = preview.url;
+
+  if (!preview.available) {
+    frame.hidden = true;
+    if (empty) empty.hidden = false;
+    initIcons(empty);
+    return;
+  }
+
+  frame.hidden = false;
+  if (empty) empty.hidden = true;
+
+  if (frame.dataset.src !== preview.src) {
+    frame.dataset.src = preview.src;
+    frame.src = preview.src;
+  }
+
+  initIcons($('#browser-toolbar'));
+}
+
+function initBrowserPreview() {
+  $('#browser-refresh')?.addEventListener('click', () => {
+    const frame = $('#browser-preview-frame');
+    if (!frame?.src) return;
+    frame.src = frame.src;
+  });
+
+  $('#browser-open-external')?.addEventListener('click', () => {
+    const frame = $('#browser-preview-frame');
+    if (frame?.src) window.open(frame.src, '_blank', 'noopener');
+  });
+}
+
+function initDiffCommitMenu() {
+  const wrap = $('#diff-commit-select-wrap');
+  if (!wrap || wrap.dataset.bound) return;
+  wrap.dataset.bound = 'true';
+
+  wrap.addEventListener('click', (e) => {
+    const trigger = e.target.closest('#diff-commit-trigger');
+    if (trigger) {
+      e.stopPropagation();
+      const menu = $('#diff-commit-menu');
+      if (!menu) return;
+      const open = menu.hidden;
+      menu.hidden = !open;
+      trigger.setAttribute('aria-expanded', String(open));
+      return;
+    }
+
+    const option = e.target.closest('.changes-commit-option');
+    if (option) {
+      e.stopPropagation();
+      const scope = option.dataset.scope;
+      if (scope === 'commit') {
+        activeChangesFilter = 'commit';
+        activeDiffCommitIndex = Number(option.dataset.commitIndex);
+      } else {
+        activeChangesFilter = scope;
+      }
+      activeDiffFileIndex = 0;
+      const menu = $('#diff-commit-menu');
+      const triggerBtn = $('#diff-commit-trigger');
+      if (menu) menu.hidden = true;
+      if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
+      renderDiff();
+    }
+  });
+
+  document.addEventListener('click', () => {
+    const menu = $('#diff-commit-menu');
+    const triggerBtn = $('#diff-commit-trigger');
+    if (menu) menu.hidden = true;
+    if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
+  });
 }
 
 /* ── DOM refs ── */
@@ -1682,6 +2085,46 @@ function showView(name) {
   $(`#view-${name}`).classList.add('active');
 }
 
+function setTheme(theme) {
+  const nextTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = nextTheme;
+  localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  $('#theme-color-meta')?.setAttribute(
+    'content',
+    nextTheme === 'light' ? '#f4f5f7' : '#0d0f14',
+  );
+  updateThemeToggleUi();
+  refreshThemeCharts();
+}
+
+function toggleTheme() {
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+
+function updateThemeToggleUi() {
+  const isDark = getTheme() === 'dark';
+  const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+  const icon = isDark ? 'sun' : 'moon';
+
+  $$('.theme-toggle').forEach((btn) => {
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    const slot = btn.querySelector('.theme-toggle-icon');
+    if (slot) slot.dataset.icon = icon;
+  });
+  initIcons();
+}
+
+function refreshThemeCharts() {
+  if (!$('#view-workspaces')?.classList.contains('active')) return;
+  setWorkspaceChartTab(activeWorkspaceChartTab);
+}
+
+function initTheme() {
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  setTheme(stored === 'light' ? 'light' : 'dark');
+}
+
 function getKimchiWorkspaceStats() {
   const agentIds = new Set();
   tasks.forEach((task) => {
@@ -1978,7 +2421,7 @@ function renderWorkspaceChartSvg(history, chartType) {
         y -= h;
         return workspaceChartBarShape(x, y, barW, h, {
           roundTop: segIndex === segments.length - 1,
-          fill: WORKSPACE_STATUS_COLORS[key],
+          fill: workspaceStatusColors()[key],
         });
       }).join('');
     }).join('');
@@ -2038,7 +2481,7 @@ function getWorkspaceChartTooltipPayload(workspaceId, chartType, dayIndex) {
       .map((row) => ({
         label: row.label,
         value: String(row.value),
-        color: WORKSPACE_STATUS_COLORS[row.key],
+        color: workspaceStatusColors()[row.key],
       }));
 
     return {
@@ -2148,6 +2591,58 @@ function initWorkspaceChartTooltips() {
   });
 }
 
+let workspaceBoardMenuId = null;
+
+function closeWorkspaceBoardMenus() {
+  $$('.workspace-card-menu').forEach((menu) => {
+    menu.hidden = true;
+  });
+  $$('.workspace-card-menu-btn').forEach((btn) => {
+    btn.setAttribute('aria-expanded', 'false');
+  });
+  workspaceBoardMenuId = null;
+}
+
+function toggleWorkspaceBoardMenu(workspaceId, btn) {
+  const isOpen = workspaceBoardMenuId === workspaceId;
+  closeWorkspaceBoardMenus();
+  if (isOpen) return;
+
+  const card = btn.closest('.workspace-card');
+  const menu = card?.querySelector('.workspace-card-menu');
+  if (!menu) return;
+
+  menu.hidden = false;
+  btn.setAttribute('aria-expanded', 'true');
+  workspaceBoardMenuId = workspaceId;
+}
+
+function deleteWorkspace(workspaceId) {
+  const workspace = WORKSPACES.find((item) => item.id === workspaceId);
+  if (!workspace || workspace.live) return;
+
+  const index = WORKSPACES.findIndex((item) => item.id === workspaceId);
+  if (index === -1) return;
+
+  WORKSPACES.splice(index, 1);
+  closeWorkspaceBoardMenus();
+
+  if (activeWorkspaceId === workspaceId) {
+    const fallback = WORKSPACES.find((item) => item.live) || WORKSPACES[0];
+    if (fallback) {
+      activeWorkspaceId = fallback.id;
+      const nameEl = $('#breadcrumb-workspace-name');
+      if (nameEl) nameEl.textContent = fallback.name;
+      if ($('#view-board')?.classList.contains('active')) renderBoard();
+    } else {
+      openWorkspacesOverview();
+    }
+  }
+
+  renderWorkspacesPage();
+  showSnackbar(`Deleted ${workspace.name}`);
+}
+
 function workspaceCardHtml(workspace) {
   const card = getWorkspaceCardData(workspace);
   const chartType = activeWorkspaceChartTab;
@@ -2159,7 +2654,31 @@ function workspaceCardHtml(workspace) {
           <h3 class="workspace-card-name">${escapeHtml(workspace.name)}</h3>
           <p class="workspace-card-repo">${escapeHtml(workspace.repository)}</p>
         </div>
-        ${workspaceMembersHtml(card.members)}
+        <div class="workspace-card-tools">
+          ${workspaceMembersHtml(card.members)}
+          <div class="workspace-card-actions">
+            <button
+              type="button"
+              class="workspace-card-menu-btn"
+              data-workspace-menu="${workspace.id}"
+              aria-label="Board options"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            >
+              <span class="icon-slot" data-icon="ellipsis-vertical" data-size="16" data-icon-class="lucide-icon lucide-muted"></span>
+            </button>
+            <div class="workspace-card-menu" role="menu" hidden>
+              <button
+                type="button"
+                class="workspace-card-menu-item workspace-card-menu-item--danger${workspace.live ? ' is-disabled' : ''}"
+                role="menuitem"
+                data-workspace-action="delete"
+                data-workspace-id="${workspace.id}"
+                ${workspace.live ? 'disabled' : ''}
+              >Delete board</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="workspace-card-metrics">
         <span><strong>${card.repos}</strong> repos</span>
@@ -2243,6 +2762,7 @@ function switchWorkspaceChartTab(_card, chartType) {
 
 function renderWorkspacesPage() {
   hideWorkspaceChartTooltip();
+  closeWorkspaceBoardMenus();
   const overview = aggregateWorkspaceOverview();
   const statsEl = $('#workspaces-stats');
   const grid = $('#workspaces-grid');
@@ -2270,6 +2790,7 @@ function renderWorkspacesPage() {
 
   if (grid) {
     grid.innerHTML = WORKSPACES.map((workspace) => workspaceCardHtml(workspace)).join('');
+    initIcons(grid);
   }
 }
 
@@ -2280,6 +2801,7 @@ function openWorkspacesOverview() {
 }
 
 function openWorkspace(workspaceId) {
+  closeWorkspaceBoardMenus();
   const workspace = WORKSPACES.find((item) => item.id === workspaceId);
   if (!workspace) return;
 
@@ -2300,6 +2822,8 @@ function openTaskDetail(taskId) {
 
   activeTaskId = taskId;
   activeDiffFileIndex = 0;
+  activeDiffCommitIndex = 0;
+  activeChangesFilter = 'uncommitted';
   taskSidebarRepo = activeRepo;
   const task = getTask(taskId);
   if (!task) return;
@@ -2316,6 +2840,8 @@ function openTaskDetail(taskId) {
   if (task.status !== 'backlog') {
     renderTaskChat();
     renderDiff();
+  } else {
+    renderBrowserPreview();
   }
   showView('task');
 
@@ -5048,9 +5574,35 @@ function initWorkTabs() {
 
 /* ── Misc Events ── */
 function initEvents() {
+  $$('.theme-toggle').forEach((btn) => {
+    btn.addEventListener('click', toggleTheme);
+  });
+
   $('#breadcrumb-studio-link')?.addEventListener('click', openWorkspacesOverview);
 
   $('#workspaces-grid')?.addEventListener('click', (e) => {
+    const menuBtn = e.target.closest('[data-workspace-menu]');
+    if (menuBtn) {
+      e.stopPropagation();
+      toggleWorkspaceBoardMenu(menuBtn.dataset.workspaceMenu, menuBtn);
+      return;
+    }
+
+    const menuAction = e.target.closest('[data-workspace-action]');
+    if (menuAction) {
+      e.stopPropagation();
+      if (menuAction.disabled) return;
+      if (menuAction.dataset.workspaceAction === 'delete') {
+        deleteWorkspace(menuAction.dataset.workspaceId);
+      }
+      return;
+    }
+
+    if (e.target.closest('.workspace-card-actions')) {
+      e.stopPropagation();
+      return;
+    }
+
     const tab = e.target.closest('.workspace-chart-tab');
     if (tab) {
       e.stopPropagation();
@@ -5061,6 +5613,11 @@ function initEvents() {
 
     const card = e.target.closest('.workspace-card');
     if (card?.dataset.workspaceId) openWorkspace(card.dataset.workspaceId);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.workspace-card-actions')) return;
+    closeWorkspaceBoardMenus();
   });
 
   $('#create-workspace-btn')?.addEventListener('click', () => {
@@ -5189,6 +5746,7 @@ function hydrateNeedsInputReviewTasks() {
 }
 
 function init() {
+  initTheme();
   initIcons();
   hydrateNeedsInputReviewTasks();
   initInProgressSimulation();
@@ -5203,12 +5761,15 @@ function init() {
   initTaskSetup();
   initModal();
   initWorkTabs();
+  initBrowserPreview();
+  initDiffCommitMenu();
   initSnackbar();
   initWorkspaceStatsMenus();
   initTooltips();
   initWorkspaceChartTooltips();
   initEvents();
   renderDiff();
+  renderBrowserPreview();
 }
 
 init();
