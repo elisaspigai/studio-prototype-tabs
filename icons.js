@@ -11,6 +11,7 @@ import {
   SquareSlash,
   Plus,
   FileCode,
+  Folder,
   X,
   GitBranch,
   Copy,
@@ -23,12 +24,17 @@ import {
   MessageCircle,
   Share2,
   ExternalLink,
+  Globe,
+  RefreshCw,
   Terminal,
   History,
   FileDiff,
   Play,
   Trash2,
   Link,
+  Sun,
+  Moon,
+  EllipsisVertical,
 } from 'lucide';
 
 const ICONS = {
@@ -43,6 +49,7 @@ const ICONS = {
   'square-slash': SquareSlash,
   plus: Plus,
   file: FileCode,
+  folder: Folder,
   x: X,
   'git-branch': GitBranch,
   copy: Copy,
@@ -55,12 +62,17 @@ const ICONS = {
   'message-circle': MessageCircle,
   share: Share2,
   'external-link': ExternalLink,
+  globe: Globe,
+  'refresh-cw': RefreshCw,
   terminal: Terminal,
   history: History,
   'file-diff': FileDiff,
   play: Play,
   'trash-2': Trash2,
   link: Link,
+  sun: Sun,
+  moon: Moon,
+  'ellipsis-vertical': EllipsisVertical,
 };
 
 const defaults = { 'stroke-width': 2 };

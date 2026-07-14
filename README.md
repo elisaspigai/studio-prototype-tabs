@@ -35,5 +35,5 @@ Press `c` on the board to open the create-task modal.
 ## Files
 
 - `index.html` — Structure for board and task detail views
-- `styles.css` — Dark theme styling
+- `styles.css` — Light and dark theme styling (toggle in header)
 - `app.js` — State, rendering, chat logic, drag-and-drop
