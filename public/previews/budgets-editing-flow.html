@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Editing Flow — Proto</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fafafa;
+      color: #171717;
+      padding: 24px;
+    }
+    .proto-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #7c3aed;
+      background: #ede9fe;
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .frame {
+      border: 2px dashed #c4b5fd;
+      border-radius: 16px;
+      padding: 20px;
+      background: #fff;
+      position: relative;
+    }
+    h1 { font-size: 18px; margin-bottom: 16px; }
+    .hotspot {
+      position: relative;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .hotspot::after {
+      content: attr(data-label);
+      position: absolute;
+      top: -8px;
+      right: 10px;
+      font-size: 9px;
+      background: #2dd4bf;
+      color: #042f2e;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .modal {
+      border: 1px solid #d4d4d4;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    }
+    .modal h2 { font-size: 14px; margin-bottom: 12px; }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #737373;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .field {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #ef4444;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 4px;
+      background: #fef2f2;
+    }
+    .error {
+      font-size: 12px;
+      color: #dc2626;
+      margin-bottom: 12px;
+    }
+    .threshold {
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .threshold-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    .threshold-row span { color: #525252; font-size: 12px; }
+    .actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid #e5e5e5;
+      background: #fff;
+      color: #404040;
+    }
+    .btn.primary {
+      background: #171717;
+      color: #fff;
+      border-color: #171717;
+    }
+    .banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #9a3412;
+    }
+    .banner-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ea580c;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="proto-badge">Interactive prototype</div>
+  <div class="frame">
+    <h1>EditBudgetFlow</h1>
+    <div class="hotspot" data-label="EditBudgetModal">
+      <div class="modal">
+        <h2>Edit budget — Infrastructure</h2>
+        <label>Amount</label>
+        <input class="field" type="text" value="$4,200" readonly />
+        <p class="error">Amount cannot exceed category cap ($4,000)</p>
+        <div class="threshold">
+          <label style="margin-bottom:8px;">Alert threshold</label>
+          <div class="threshold-row">
+            <strong>80%</strong>
+            <span>Notify when spend crosses this level</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button">Cancel</button>
+          <button class="btn primary" type="button">Save changes</button>
+        </div>
+      </div>
+    </div>
+    <div class="hotspot" data-label="ThresholdPanel">
+      <div style="font-size:13px;color:#525252;margin-bottom:8px;">Inline expand variant (needs-input)</div>
+      <div class="threshold">
+        <div class="threshold-row">
+          <strong>Confirm threshold</strong>
+          <span>Modal vs inline — pending decision</span>
+        </div>
+      </div>
+    </div>
+    <div class="hotspot" data-label="AlertBanner" style="margin-bottom:0;">
+      <div class="banner">
+        <span class="banner-dot"></span>
+        <span>Infrastructure is at 82% — threshold alert active</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

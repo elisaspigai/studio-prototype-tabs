@@ -23,6 +23,12 @@ const MODEL_OPTIONS = [
   { id: 'nemotron', label: 'Nemotron-3-super-fp4', desc: '1M context · large codebases and documents' },
 ];
 
+const DELIVERY_MODES = [
+  { id: 'manual', label: 'Manual PR', desc: 'You commit and open PRs yourself' },
+  { id: 'auto-pr', label: 'Auto PR', desc: 'Open a pull request when work completes' },
+  { id: 'auto-commit', label: 'Auto commit', desc: 'Commit changes directly without a PR' },
+];
+
 const REVIEW_REASONS = {
   'needs-input': {
     icon: 'message-circle',
@@ -46,6 +52,7 @@ const SIDEBAR_SECTIONS = {
     { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
   ],
   code: [
+    { id: 'in-progress', label: 'In progress', dot: 'in-progress' },
     { id: 'needs-input', label: 'Needs input', dot: 'needs-input' },
     { id: 'done', label: 'Done', dot: 'done' },
     { id: 'merged', label: 'Merged', dot: 'merged' },
@@ -137,7 +144,7 @@ let tasks = [
     id: 't7',
     title: 'Wire budget cards to API contracts',
     repo: 'frontend',
-    status: 'backlog',
+    status: 'in-progress',
     prs: 0,
     commits: 0,
     files: 0,
@@ -149,7 +156,7 @@ let tasks = [
     id: 't8',
     title: 'Add budget threshold alert endpoints',
     repo: 'backend',
-    status: 'backlog',
+    status: 'in-progress',
     prs: 0,
     commits: 0,
     files: 0,
@@ -161,7 +168,7 @@ let tasks = [
     id: 't9',
     title: 'Fix incorrect settings icon in sidebar',
     repo: 'frontend',
-    status: 'backlog',
+    status: 'in-progress',
     prs: 0,
     commits: 0,
     files: 0,
@@ -173,7 +180,7 @@ let tasks = [
     id: 't10',
     title: 'Fix dashboard spend totals discrepancy',
     repo: 'backend',
-    status: 'backlog',
+    status: 'in-progress',
     prs: 0,
     commits: 0,
     files: 0,
@@ -277,12 +284,393 @@ tasks.forEach((task) => {
   }
 });
 
+function hydrateMockModeChats() {
+  const designMocks = {
+    t1: [
+      {
+        role: 'user',
+        text: 'Create a prototype of the budgets overview — summary strip, category list, and period toggle.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Building overview prototype…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/overview.canvas',
+            desc: 'layout overview frames',
+            code: `<span class="key">Frame</span>: BudgetsOverview
+<span class="key">Components</span>: summary strip, category list, period toggle`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>First pass is in the artifact preview — summary metrics, category rows, and a month/quarter toggle.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Add alert pills on rows above 80% utilization',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Adding threshold indicators…' },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Added amber alert pills with hover tooltips showing current spend vs. budget cap. Rows under 80% stay neutral.</p>',
+          },
+        ],
+      },
+    ],
+    t6: [
+      {
+        role: 'user',
+        text: 'Prototype budget editing and alert threshold configuration — include validation errors and confirmation states.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Scaffolding edit flow…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/editing-flow.canvas',
+            desc: 'edit modal + threshold panel',
+            code: `<span class="key">Frames</span>: EditBudgetModal, ThresholdPanel, AlertBanner
+<span class="key">States</span>: default, validation error, save confirmation`,
+          },
+          {
+            type: 'bash',
+            dot: 'green',
+            label: '<strong>Bash</strong> Link flow hotspots',
+            in: 'kimchi proto link editing-flow.canvas --hotspots save-btn,threshold-input',
+            out: '4 hotspots wired',
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Edit modal covers amount, category, and inline validation. Threshold panel opens from the alert pill with save/cancel paths.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Should threshold confirmation be a separate step or inline with the amount field?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Blocked on a product decision…' },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>I have a question before I can finish <strong>Prototype budget editing &amp; alert flows</strong>:</p><p>Should the alert threshold confirmation be a modal or an inline expand below the amount field?</p>',
+          },
+          {
+            type: 'actions',
+            dot: 'gray',
+            buttons: [
+              { label: 'Modal confirmation', action: 'needs-input:modal', primary: true },
+              { label: 'Inline expand', action: 'needs-input:inline', primary: false },
+              { label: 'Defer to v2', action: 'needs-input:defer', primary: false },
+            ],
+          },
+        ],
+      },
+    ],
+    t11: [
+      {
+        role: 'user',
+        text: 'Design empty states and onboarding for when a workspace has no budgets yet.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Building first-run empty state…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/empty-states.canvas',
+            desc: 'empty + onboarding copy',
+            code: `<span class="key">States</span>: zero-budgets, first-run CTA, skeleton loader
+<span class="key">Copy</span>: headline, helper text, create-budget button`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Empty state includes illustration placeholder, headline, and a primary CTA to create the first budget. Onboarding tooltip walks through the summary strip.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Looks good — ship it for engineering handoff',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'bash',
+            dot: 'green',
+            label: '<strong>Bash</strong> Export handoff bundle',
+            in: 'kimchi proto export budgets --frame empty-states',
+            out: '✓ tokens + HTML/CSS exported',
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Marked ready for handoff. Frontend can pull the standalone HTML/CSS and match spacing tokens from the export.</p>',
+          },
+        ],
+      },
+    ],
+  };
+
+  const generalMocks = {
+    t1: [
+      {
+        role: 'user',
+        text: 'How do budget alerts work in Kimchi? When do users actually get notified?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Budget alerts trigger when spend crosses a threshold you set per budget — typically 80%, 90%, or 100%. Kimchi shows an in-app banner first, then email if the alert stays active for 24 hours.</p><p>Alerts are evaluated on a rolling window matching the budget period (week, month, quarter).</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Can one budget have multiple thresholds, or just one?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>One threshold per budget today. Multiple thresholds are on the roadmap — the Granola research called out wanting both warning and critical levels.</p>',
+        }],
+      },
+    ],
+    t6: [
+      {
+        role: 'user',
+        text: 'Analyze the user research from our Granola interview about budget editing flows.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Reviewing Granola notes…' },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Three themes from the Granola session:</p><ul><li><strong>Inline editing expected</strong> — users tried to click the amount directly, not an Edit button.</li><li><strong>Threshold confusion</strong> — 2 of 3 participants didn\'t understand alert thresholds until prompted.</li><li><strong>Confirmation anxiety</strong> — saving a lower threshold needed explicit confirmation copy.</li></ul>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'What should we prioritize for the hackathon MVP?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Ship inline amount edit plus a single threshold field with validation errors. Defer multi-threshold and email alerts — the interview pain was discoverability, not notification channels.</p>',
+        }],
+      },
+    ],
+    t11: [
+      {
+        role: 'user',
+        text: 'Help me brainstorm copy for the Kimchi pricing page hero section.',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Here are three directions:</p><p><strong>1. Outcome-led:</strong> "Ship AI-assisted workflows your team actually finishes."</p><p><strong>2. Speed-led:</strong> "From idea to merged PR — without leaving Kimchi."</p><p><strong>3. Trust-led:</strong> "Studio, agents, and code review in one place."</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'The audience is engineering managers evaluating tools for their team. Which angle fits best?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Lead with outcome (#1) for EMs — they care about throughput and visibility. Support with a subhead on per-seat pricing and usage caps so finance questions are answered above the fold.</p>',
+        }],
+      },
+    ],
+  };
+
+  tasks.forEach((task) => {
+    if (designMocks[task.id] && !(task.designChat?.length)) {
+      task.designChat = designMocks[task.id];
+    }
+    if (generalMocks[task.id] && !(task.generalChat?.length)) {
+      task.generalChat = generalMocks[task.id];
+    }
+  });
+}
+
+hydrateMockModeChats();
+
 let activeTaskId = null;
 let activeRepo = 'all';
+let subheaderView = 'project';
 let activeWorkspaceId = 'kimchi';
 let activeWorkspaceChartTab = 'tasks';
 let activeAppMode = 'chat';
 let designArtifactHtml = null;
+
+const DIRECTORY_SKILLS = [
+  { id: 'design-eval', slug: '/nn-group-design-eval', author: 'mike@cast.ai', uses: 4, source: 'shared', desc: 'Evaluates UX designs against NN/g heuristics and accessibility standards.' },
+  { id: 'mcp-apps', slug: '/mcp-apps', author: 'daniel@monograph.com', uses: 4, source: 'shared', desc: 'Convenient CLI for managing MCP apps and local tool servers.' },
+  { id: 'gsd-plan', slug: '/gsdcreateplan-phase', author: 'b@useplumb.com', uses: 4, source: 'organization', desc: 'Entry point for GSD planning — creates PROJECT.md and ROADMAP.md.' },
+  { id: 'slack-search', slug: '/slack-search', author: 'team@kimchi.dev', uses: 12, source: 'organization', desc: 'Search Slack channels and threads for product context and decisions.' },
+  { id: 'budget-copy', slug: '/budget-copy-review', author: 'design@kimchi.dev', uses: 3, source: 'anthropic', desc: 'Reviews pricing and budget UI copy for clarity and conversion.' },
+  { id: 'proto-handoff', slug: '/prototype-handoff', author: 'mike@cast.ai', uses: 6, source: 'anthropic', desc: 'Packages HTML/CSS prototypes with tokens for engineering handoff.' },
+];
+
+const DIRECTORY_CONNECTORS = [
+  { id: 'gmail', name: 'Gmail', badge: '#2 popular', desc: 'Draft replies, summarize threads, and search your inbox.', color: '#ea4335', letter: 'M' },
+  { id: 'figma', name: 'Figma', badge: null, desc: 'Generate diagrams and better code from Figma context.', color: '#a259ff', letter: 'F' },
+  { id: 'google-drive', name: 'Google Drive', badge: null, desc: 'Search, read, and upload files instantly.', color: '#34a853', letter: 'D' },
+  { id: 'google-calendar', name: 'Google Calendar', badge: null, desc: 'Manage your schedule and coordinate meetings effortlessly.', color: '#4285f4', letter: 'C' },
+  { id: 'atlassian', name: 'Atlassian Rovo', badge: null, desc: 'Access Jira and Confluence from Kimchi.', color: '#0052cc', letter: 'A' },
+  { id: 'slack', name: 'Slack', badge: 'Most popular', desc: 'Send messages, create canvases, and fetch Slack data.', color: '#611f69', letter: 'S' },
+  { id: 'granola', name: 'Granola', badge: null, desc: 'The AI notepad for meetings — sync notes into project context.', color: '#f59e0b', letter: 'G' },
+  { id: 'asana', name: 'Asana', badge: 'Interactive', desc: 'Connect to Asana to coordinate tasks, projects, and goals.', color: '#f06a6a', letter: 'A' },
+  { id: 'sentry', name: 'Sentry', badge: null, desc: 'Search, query, and debug errors intelligently.', color: '#362d59', letter: 'Se' },
+  { id: 'zoominfo', name: 'ZoomInfo', badge: null, desc: 'Enrich contacts and accounts with GTM intelligence.', color: '#e4002b', letter: 'Z' },
+  { id: 'apollo', name: 'Apollo.io', badge: null, desc: 'Pull company and contact data into research threads.', color: '#2f2f8f', letter: 'Ap' },
+  { id: 'stripe', name: 'Stripe', badge: null, desc: 'Query billing, subscriptions, and revenue metrics.', color: '#635bff', letter: 'St' },
+];
+
+function createProjectDirectory(activeSkills = [], activeConnectors = []) {
+  return {
+    activeSkills: new Set(activeSkills),
+    activeConnectors: new Set(activeConnectors),
+  };
+}
+
+const projectDirectories = {
+  kimchi: createProjectDirectory(
+    ['design-eval', 'gsd-plan', 'slack-search'],
+    ['slack', 'granola', 'figma'],
+  ),
+  'one-click': createProjectDirectory(
+    ['mcp-apps', 'budget-copy'],
+    ['gmail', 'google-calendar', 'sentry'],
+  ),
+  hackathon: createProjectDirectory(
+    ['proto-handoff', 'gsd-plan'],
+    ['slack', 'granola', 'asana', 'atlassian'],
+  ),
+};
+
+let directoryState = {
+  section: 'skills',
+  sourceTab: 'shared',
+  search: '',
+};
+
+function getDirectoryProjectIds() {
+  return Object.keys(PROJECT_LABELS);
+}
+
+function getProjectDirectory(projectId) {
+  if (!projectDirectories[projectId]) {
+    projectDirectories[projectId] = createProjectDirectory();
+  }
+  return projectDirectories[projectId];
+}
+
+function isDirectoryAllProjects() {
+  return activeRepo === 'all';
+}
+
+function getDirectoryScopeLabel() {
+  if (isDirectoryAllProjects()) return 'All projects';
+  return projectLabel(activeRepo);
+}
+
+function getDirectoryModalTitle() {
+  return `${getDirectoryScopeLabel()} directory`;
+}
+
+function getUnionActiveSkills() {
+  const ids = new Set();
+  getDirectoryProjectIds().forEach((projectId) => {
+    getProjectDirectory(projectId).activeSkills.forEach((id) => ids.add(id));
+  });
+  return ids;
+}
+
+function getUnionActiveConnectors() {
+  const ids = new Set();
+  getDirectoryProjectIds().forEach((projectId) => {
+    getProjectDirectory(projectId).activeConnectors.forEach((id) => ids.add(id));
+  });
+  return ids;
+}
+
+function getScopedActiveSkills() {
+  if (isDirectoryAllProjects()) return getUnionActiveSkills();
+  return getProjectDirectory(activeRepo).activeSkills;
+}
+
+function getScopedActiveConnectors() {
+  if (isDirectoryAllProjects()) return getUnionActiveConnectors();
+  return getProjectDirectory(activeRepo).activeConnectors;
+}
+
+function getProjectsUsingSkill(skillId) {
+  return getDirectoryProjectIds().filter((projectId) => getProjectDirectory(projectId).activeSkills.has(skillId));
+}
+
+function getProjectsUsingConnector(connectorId) {
+  return getDirectoryProjectIds().filter((projectId) => getProjectDirectory(projectId).activeConnectors.has(connectorId));
+}
+
+function isSkillActiveInScope(skillId) {
+  if (isDirectoryAllProjects()) return getProjectsUsingSkill(skillId).length > 0;
+  return getProjectDirectory(activeRepo).activeSkills.has(skillId);
+}
+
+function isConnectorActiveInScope(connectorId) {
+  if (isDirectoryAllProjects()) return getProjectsUsingConnector(connectorId).length > 0;
+  return getProjectDirectory(activeRepo).activeConnectors.has(connectorId);
+}
+
+function directoryProjectsHtml(type, id) {
+  if (!isDirectoryAllProjects()) return '';
+
+  const projectIds = type === 'skill'
+    ? getProjectsUsingSkill(id)
+    : getProjectsUsingConnector(id);
+
+  if (projectIds.length === 0) {
+    return '<div class="directory-card-projects"><span class="directory-card-projects-empty">Not used in any project</span></div>';
+  }
+
+  const chips = projectIds
+    .map((projectId) => `<span class="directory-project-chip">${escapeHtml(projectLabel(projectId))}</span>`)
+    .join('');
+
+  return `<div class="directory-card-projects">${chips}</div>`;
+}
 
 const WORKSPACE_CHART_TABS = [
   { id: 'tasks', label: 'Tasks' },
@@ -1396,12 +1784,59 @@ function applyAppModeUi() {
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', String(active));
   });
+
+  renderAppModeTabBadges();
+}
+
+function getTasksForAppMode(mode) {
+  const list = tasksForProject(tasks).filter((task) => !task.archived && !task.draft);
+  if (mode === 'code') return list.filter((task) => task.repo !== 'design');
+  return list.filter((task) => task.repo === 'design');
+}
+
+function taskNeedsModeAttention(task, mode) {
+  if (task.archived || task.draft) return false;
+
+  if (mode === 'chat') {
+    return task.chatReviewReason === 'needs-input' || task.chatReviewReason === 'ready';
+  }
+
+  if (task.status === 'closed') return false;
+
+  const bucket = getSidebarBucket(task, mode);
+  return bucket === 'needs-input' || bucket === 'done';
+}
+
+function getModeAttentionCount(mode) {
+  return getTasksForAppMode(mode).filter((task) => taskNeedsModeAttention(task, mode)).length;
+}
+
+function renderAppModeTabBadges() {
+  $$('.app-mode-tab').forEach((tab) => {
+    const mode = normalizeAppMode(tab.dataset.appMode);
+    const badge = tab.querySelector('.app-mode-tab-badge');
+    if (!badge) return;
+
+    const count = getModeAttentionCount(mode);
+    const isActive = mode === activeAppMode;
+
+    if (isActive || count === 0) {
+      badge.hidden = true;
+      badge.textContent = '';
+      badge.removeAttribute('aria-label');
+    } else {
+      badge.hidden = false;
+      badge.textContent = count > 9 ? '9+' : String(count);
+      badge.setAttribute('aria-label', `${count} conversation${count === 1 ? '' : 's'} need attention`);
+    }
+  });
 }
 
 function ensureActiveTaskForMode() {
   const visible = tasksForTaskSidebar();
   if (activeTaskId && visible.some((task) => task.id === activeTaskId)) {
     renderTaskSidebar();
+    updateProjectEmptyState();
     return;
   }
 
@@ -1414,6 +1849,7 @@ function ensureActiveTaskForMode() {
   activeTaskId = null;
   renderTaskSidebar();
   renderBoard();
+  updateProjectEmptyState();
 }
 
 function normalizeAppMode(mode) {
@@ -1427,24 +1863,51 @@ function setAppMode(mode, { loadTask = true } = {}) {
   localStorage.setItem(APP_MODE_STORAGE_KEY, activeAppMode);
   applyAppModeUi();
   renderBoardSubheader();
+  applyProjectEmptyModeUi();
+
+  if (subheaderView === 'overview') {
+    applySubheaderViewUi();
+    renderProjectOverview();
+    return;
+  }
 
   if (activeAppMode === 'code') {
     if (loadTask) ensureActiveTaskForMode();
-    else renderTaskSidebar();
+    else {
+      renderTaskSidebar();
+      updateProjectEmptyState();
+    }
     return;
   }
 
   if (activeAppMode === 'chat') {
-    renderGeneralChat();
-    renderTaskSidebar();
-    $('#general-chat-input')?.focus();
+    if (loadTask) ensureActiveTaskForMode();
+    else renderTaskSidebar();
+    updateProjectEmptyState();
+    if (!shouldShowEmptyCompose()) {
+      refreshActiveModeChat();
+      syncModelSelects(getTask(activeTaskId));
+    }
+    if (shouldShowEmptyCompose()) {
+      $('#project-empty-input')?.focus();
+    } else {
+      $('#general-chat-input')?.focus();
+    }
     return;
   }
 
-  renderDesignChat();
-  renderDesignArtifact(designArtifactHtml);
   if (loadTask) ensureActiveTaskForMode();
-  else renderTaskSidebar();
+  else {
+    renderTaskSidebar();
+    updateProjectEmptyState();
+  }
+  if (!shouldShowEmptyCompose()) {
+    refreshActiveModeChat();
+    syncModelSelects(getTask(activeTaskId));
+  }
+  if (shouldShowEmptyCompose()) {
+    $('#project-empty-input')?.focus();
+  }
 }
 
 function initAppMode() {
@@ -1459,6 +1922,93 @@ function initAppMode() {
       }
     });
   });
+}
+
+function getTaskModeMessages(task, mode = activeAppMode) {
+  if (mode === 'chat') {
+    if (!task.generalChat) task.generalChat = [];
+    return task.generalChat;
+  }
+  if (mode === 'design') {
+    if (!task.designChat) task.designChat = [];
+    return task.designChat;
+  }
+  if (!task.chat) task.chat = [];
+  return task.chat;
+}
+
+function renderConversationForTask(container, task, mode = activeAppMode) {
+  if (!container || !task) return;
+
+  container.innerHTML = '';
+  const messages = getTaskModeMessages(task, mode);
+
+  if (messages.length > 0) {
+    messages.forEach((msg) => {
+      if (msg.role === 'user') appendUserBubble(container, msg.text, msg.links);
+      else appendAgentTimeline(container, msg.steps);
+    });
+    return;
+  }
+
+  if (mode === 'design' && task.workSteps?.length) {
+    let steps = task.workSteps;
+    if (task.status === 'review' && task.reviewReason === 'needs-input' && !needsInputTailAlreadyAppended(steps)) {
+      steps = [...steps, ...getNeedsInputTailSteps(task)];
+    }
+    appendAgentTimeline(container, steps);
+  }
+}
+
+function getActiveModeChatContainer() {
+  if (activeAppMode === 'chat') return $('#general-chat-messages');
+  if (activeAppMode === 'design') return $('#design-chat-messages');
+  return $('#task-chat-messages');
+}
+
+function renderGeneralChatForTask(task) {
+  const container = $('#general-chat-messages');
+  if (!container) return;
+  if (!task) {
+    renderGeneralChat();
+    return;
+  }
+  renderConversationForTask(container, task, 'chat');
+}
+
+function renderDesignChatForTask(task) {
+  const container = $('#design-chat-messages');
+  if (!container) return;
+  if (!task) {
+    renderDesignChat();
+    return;
+  }
+  renderConversationForTask(container, task, 'design');
+}
+
+function refreshActiveModeChat() {
+  if (shouldShowEmptyCompose()) return;
+
+  const task = getTask(activeTaskId);
+  if (!task) return;
+
+  if (activeAppMode === 'chat') {
+    renderGeneralChatForTask(task);
+    return;
+  }
+
+  if (activeAppMode === 'design') {
+    renderDesignChatForTask(task);
+    if (task.repo === 'design' && task.status !== 'backlog') {
+      buildDesignPrototypeHtml(task.title, task.id).then((html) => {
+        if (activeTaskId !== task.id || activeAppMode !== 'design') return;
+        designArtifactHtml = html;
+        renderDesignArtifact(html);
+      });
+    } else {
+      renderDesignArtifact(null);
+    }
+  }
 }
 
 function renderDesignChat() {
@@ -1480,18 +2030,75 @@ function designChatWelcomeHtml() {
     </div>`;
 }
 
-function startNewDesignChat() {
-  activeTaskId = null;
+function startDraftFromEmptyCompose(description) {
+  const task = getTask(activeTaskId);
+  if (!task?.draft || activeAppMode === 'code') return null;
+
+  const text = description.trim();
+  if (!text) return null;
+
+  task.description = text;
+  task.title = text.split('\n')[0].trim() || text;
+  task.draft = false;
+  Object.assign(task, getProjectEmptyComposeSettings());
+  $('#task-detail-title').textContent = task.title;
+  renderBoard();
+  updateProjectEmptyState();
+  syncModelSelects(task);
+
+  if (activeAppMode === 'chat') {
+    handleGeneralChat(text);
+    return task;
+  }
+
+  if (activeAppMode === 'design') {
+    handleDesignChat(text);
+    return task;
+  }
+
+  return task;
+}
+
+function startNewConversation() {
+  if (activeAppMode === 'code') {
+    startNewCodeTask();
+    return;
+  }
+
+  const task = {
+    id: uid(),
+    title: activeAppMode === 'chat' ? 'New chat' : 'New artifact',
+    description: '',
+    draft: true,
+    repo: 'design',
+    project: defaultProjectForNewTask(),
+    status: 'in-progress',
+    permissionMode: 'yolo',
+    model: getModelFromActiveCompose(),
+    prs: 0,
+    commits: 0,
+    files: 0,
+    additions: 0,
+    deletions: 0,
+    chat: [],
+    generalChat: [],
+    designChat: [],
+  };
+
+  tasks.unshift(task);
   designArtifactHtml = null;
+  renderBoard();
+  openTaskDetail(task.id);
+  focusProjectEmptyInput(
+    activeAppMode === 'chat' ? 'Ask anything…' : 'Describe a screen to prototype…',
+  );
+}
 
-  const generalContainer = $('#general-chat-messages');
-  if (generalContainer) generalContainer.innerHTML = generalChatWelcomeHtml();
-
-  const designContainer = $('#design-chat-messages');
-  if (designContainer) designContainer.innerHTML = designChatWelcomeHtml();
-
-  renderDesignArtifact(null);
-  setAppMode('chat', { loadTask: false });
+function startNewDesignChat() {
+  if (activeAppMode !== 'chat') {
+    setAppMode('chat', { loadTask: false });
+  }
+  startNewConversation();
 }
 
 function renderGeneralChat() {
@@ -1542,23 +2149,34 @@ function buildGeneralChatReply(text) {
   return `<p>Got it. Ask a follow-up, or say something like <strong>"create a prototype of …"</strong> when you want to switch to Design mode.</p>`;
 }
 
+function persistModeChatMessage(task, mode, message) {
+  if (!task) return;
+  const messages = getTaskModeMessages(task, mode);
+  messages.push(message);
+}
+
 async function handleGeneralChat(text) {
   const container = $('#general-chat-messages');
   if (!container) return;
 
+  const task = getTask(activeTaskId);
   container.querySelector('.general-chat-welcome')?.remove();
   appendUserBubble(container, text);
+  applyModelToTask(task);
+  persistModeChatMessage(task, 'chat', { role: 'user', text });
 
   if (isPrototypeRequest(text)) {
     let typing = showTyping(container);
     await sleep(650);
     typing.remove();
 
-    appendAgentTimeline(container, [{
+    const switchSteps = [{
       type: 'text',
       dot: 'gray',
       html: '<p>Switching to Design to build your prototype…</p>',
-    }]);
+    }];
+    appendAgentTimeline(container, switchSteps);
+    persistModeChatMessage(task, 'chat', { role: 'agent', steps: switchSteps });
 
     await sleep(350);
     setAppMode('design', { loadTask: false });
@@ -1571,11 +2189,13 @@ async function handleGeneralChat(text) {
   await sleep(800 + Math.random() * 400);
   typing.remove();
 
-  appendAgentTimeline(container, [{
+  const replySteps = [{
     type: 'text',
     dot: 'gray',
     html: buildGeneralChatReply(text),
-  }]);
+  }];
+  appendAgentTimeline(container, replySteps);
+  persistModeChatMessage(task, 'chat', { role: 'agent', steps: replySteps });
 }
 
 function renderDesignArtifact(html) {
@@ -1669,21 +2289,385 @@ function buildGenericPrototypeHtml(title, prompt = '') {
 </html>`;
 }
 
-async function loadBudgetPrototypeHtml() {
+async function loadPreviewHtml(path, fallbackTitle, fallbackHint) {
   try {
-    const response = await fetch('/previews/budgets-proto.html');
+    const response = await fetch(path);
     if (!response.ok) throw new Error('missing preview');
     return response.text();
   } catch {
-    return buildGenericPrototypeHtml('Budgets overview', 'Budget summary strip, category list, and alert indicators.');
+    return buildGenericPrototypeHtml(fallbackTitle, fallbackHint);
   }
 }
 
-async function buildDesignPrototypeHtml(prompt) {
+async function loadBudgetPrototypeHtml() {
+  return loadPreviewHtml(
+    '/previews/budgets-proto.html',
+    'Budgets overview',
+    'Budget summary strip, category list, and alert indicators.',
+  );
+}
+
+async function loadBudgetEditingFlowHtml() {
+  return loadPreviewHtml(
+    '/previews/budgets-editing-flow.html',
+    'Budget editing flow',
+    'Edit modal, threshold panel, and alert banner states.',
+  );
+}
+
+async function loadBudgetEmptyStatesHtml() {
+  return loadPreviewHtml(
+    '/previews/budgets-empty-states.html',
+    'Budgets empty states',
+    'Zero-budgets empty state, onboarding tooltip, and skeleton loader.',
+  );
+}
+
+const DESIGN_TASK_ARTIFACTS = {
+  t1: loadBudgetPrototypeHtml,
+  t6: loadBudgetEditingFlowHtml,
+  t11: loadBudgetEmptyStatesHtml,
+};
+
+const DESIGN_PREVIEW_URLS = {
+  t1: '/previews/budgets-proto.html',
+  t6: '/previews/budgets-editing-flow.html',
+  t11: '/previews/budgets-empty-states.html',
+};
+
+function stripHtml(html) {
+  const el = document.createElement('div');
+  el.innerHTML = html;
+  return el.textContent || '';
+}
+
+function groupTasksByProject(taskList) {
+  const groups = new Map();
+  getDirectoryProjectIds().forEach((projectId) => groups.set(projectId, []));
+  taskList.forEach((task) => {
+    const projectId = task.project || 'kimchi';
+    if (!groups.has(projectId)) groups.set(projectId, []);
+    groups.get(projectId).push(task);
+  });
+  return groups;
+}
+
+function getChatConversationStatus(task) {
+  if (task.chatReviewReason === 'needs-input') return { label: 'Needs input', cls: 'needs-input' };
+  if (task.chatReviewReason === 'ready') return { label: 'Done', cls: 'done' };
+  if (task.draft) return { label: 'Draft', cls: 'backlog' };
+  return { label: 'Active', cls: 'in-progress' };
+}
+
+function getChatLastSnippet(task) {
+  const messages = task.generalChat || [];
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message.text) return message.text;
+    const textStep = [...(message.steps || [])].reverse().find((step) => step.type === 'text');
+    if (textStep?.html) return stripHtml(textStep.html).trim();
+  }
+  return 'No messages yet';
+}
+
+function getDesignConversationStatus(task) {
+  const bucket = getSidebarBucket(task, 'design');
+  if (bucket === 'needs-input') return { label: 'Needs input', cls: 'needs-input' };
+  if (bucket === 'done') return { label: 'Ready', cls: 'done' };
+  if (bucket === 'in-progress') return { label: 'In progress', cls: 'in-progress' };
+  return { label: 'Archive', cls: 'backlog' };
+}
+
+function getCodeConversationStatus(task) {
+  const bucket = getSidebarBucket(task, 'code');
+  if (bucket === 'needs-input') return { label: 'Needs input', cls: 'needs-input' };
+  if (bucket === 'done') return { label: 'Ready to merge', cls: 'done' };
+  if (bucket === 'in-progress') return { label: 'In progress', cls: 'in-progress' };
+  if (bucket === 'active') return { label: 'Backlog', cls: 'backlog' };
+  if (bucket === 'merged') return { label: 'Merged', cls: 'merged' };
+  return { label: 'Backlog', cls: 'backlog' };
+}
+
+function getCodeProjectStats(projectTasks) {
+  const prsWaiting = projectTasks.filter(
+    (task) => task.status === 'review' && task.reviewReason === 'ready' && task.prs > 0,
+  ).length;
+  const idleAgents = projectTasks.filter(
+    (task) => task.status === 'in-progress' && task.id !== activeSimulatedTaskId,
+  ).length;
+  const activeTasks = projectTasks.filter(
+    (task) => task.status !== 'backlog' && task.status !== 'closed' && !task.archived,
+  );
+  const files = activeTasks.reduce((sum, task) => sum + (task.files || 0), 0);
+  const additions = activeTasks.reduce((sum, task) => sum + (task.additions || 0), 0);
+  const deletions = activeTasks.reduce((sum, task) => sum + (task.deletions || 0), 0);
+
+  return { prsWaiting, idleAgents, files, additions, deletions };
+}
+
+function overviewCodeStatsPillsHtml(stats) {
+  const fileLabel = stats.files === 1 ? '1 file' : `${stats.files} files`;
+  const filesPill = `<span class="workspace-pill workspace-pill-files">${fileLabel} <span class="add">+${stats.additions}</span> <span class="del">−${stats.deletions}</span></span>`;
+
+  const prLabel = stats.prsWaiting === 1 ? '1 PR' : `${stats.prsWaiting} PRs`;
+  const prPill = `<span class="workspace-pill workspace-pill-pr">${iconHtml('git-pull-request', { size: 12 })} ${prLabel}</span>`;
+
+  const idleLabel = stats.idleAgents === 1 ? '1 idle agent' : `${stats.idleAgents} idle agents`;
+  const idlePill = `<span class="workspace-pill workspace-pill-idle">${iconHtml('loader', { size: 12, className: 'lucide-icon lucide-muted' })} ${idleLabel}</span>`;
+
+  return `${filesPill}${prPill}${idlePill}`;
+}
+
+function updateSubheaderTabUi() {
+  $$('.repo-tab:not(.add-repo)').forEach((tab) => {
+    const isOverview = tab.classList.contains('repo-tab-overview');
+    if (isOverview) {
+      tab.classList.toggle('active', subheaderView === 'overview');
+      return;
+    }
+    tab.classList.toggle('active', subheaderView === 'project' && tab.dataset.repo === activeRepo);
+  });
+}
+
+function applySubheaderViewUi() {
+  const isOverview = subheaderView === 'overview';
+  const layout = $('.task-layout');
+  const taskMain = $('.task-main');
+  const overview = $('#project-overview');
+  const panels = $('.task-main-panels');
+  const taskSubheader = $('.task-subheader');
+  const empty = $('#project-empty-state');
+
+  layout?.classList.toggle('is-overview', isOverview);
+  taskMain?.classList.toggle('is-overview', isOverview);
+  overview?.toggleAttribute('hidden', !isOverview);
+  panels?.toggleAttribute('hidden', isOverview);
+  taskSubheader?.toggleAttribute('hidden', isOverview);
+
+  if (isOverview) {
+    empty?.setAttribute('hidden', '');
+    taskMain?.classList.remove('is-project-empty');
+  } else {
+    updateProjectEmptyState();
+  }
+}
+
+function setSubheaderView(view, repo = activeRepo, { skipOpenTask = false } = {}) {
+  subheaderView = view === 'overview' ? 'overview' : 'project';
+  if (subheaderView === 'project') {
+    activeRepo = repo || 'all';
+    renderDirectoryCounts();
+    renderAppModeTabBadges();
+    if ($('#directory-modal')?.open) renderDirectoryModal();
+  }
+  updateSubheaderTabUi();
+  applySubheaderViewUi();
+  if (subheaderView === 'overview') {
+    renderProjectOverview();
+  } else if (!skipOpenTask) {
+    openFirstTaskForProject();
+  }
+}
+
+function overviewCreateCardHtml(projectId) {
+  const copy = {
+    chat: { label: 'New chat', icon: 'message-circle' },
+    design: { label: 'New artifact', icon: 'layout-grid' },
+    code: { label: 'New task', icon: 'plus' },
+  }[activeAppMode] || { label: 'New task', icon: 'plus' };
+  const designClass = activeAppMode === 'design' ? ' overview-create-card--design' : '';
+
+  return `<button type="button" class="overview-card overview-create-card${designClass}" data-create-project="${projectId}">
+    <span class="overview-create-icon">${iconHtml(copy.icon, { size: 18, className: 'lucide-icon' })}</span>
+    <span class="overview-create-label">${copy.label}</span>
+  </button>`;
+}
+
+function overviewChatCardHtml(task) {
+  const status = getChatConversationStatus(task);
+  const snippet = getChatLastSnippet(task);
+  const messageCount = (task.generalChat || []).length;
+  const meta = `${messageCount} message${messageCount === 1 ? '' : 's'}`;
+
+  return `<button type="button" class="overview-card overview-chat-card" data-task-id="${task.id}">
+    <h4 class="overview-card-title">${escapeHtml(task.title)}</h4>
+    <p class="overview-card-snippet">${escapeHtml(snippet)}</p>
+    ${overviewCardFooterHtml(task, 'chat', meta, status)}
+  </button>`;
+}
+
+function overviewDesignCardHtml(task) {
+  const status = getDesignConversationStatus(task);
+  const previewUrl = DESIGN_PREVIEW_URLS[task.id];
+  const previewHtml = previewUrl
+    ? `<iframe src="${previewUrl}" title="${escapeHtml(task.title)} preview" loading="lazy" tabindex="-1"></iframe>`
+    : '<div class="overview-design-preview-placeholder">No preview yet</div>';
+  const meta = `${task.commits || 0} commit${task.commits === 1 ? '' : 's'}`;
+
+  return `<button type="button" class="overview-card overview-design-card" data-task-id="${task.id}">
+    <div class="overview-design-preview">${previewHtml}</div>
+    <div class="overview-design-body">
+      <h4 class="overview-card-title">${escapeHtml(task.title)}</h4>
+      ${overviewCardFooterHtml(task, 'design', meta, status)}
+    </div>
+  </button>`;
+}
+
+function overviewCodeTaskHtml(task) {
+  const status = getCodeConversationStatus(task);
+  const lines = (task.additions || 0) + (task.deletions || 0);
+  const meta = lines > 0
+    ? `+${task.additions || 0} −${task.deletions || 0}`
+    : `${task.commits || 0} commit${task.commits === 1 ? '' : 's'}`;
+  const mergedClass = status.cls === 'merged' ? ' is-merged' : '';
+
+  return `<button type="button" class="overview-card overview-code-card${mergedClass}" data-task-id="${task.id}">
+    <h4 class="overview-card-title">${escapeHtml(task.title)}</h4>
+    ${overviewCardFooterHtml(task, 'code', meta, status)}
+  </button>`;
+}
+
+function overviewCodeProjectGroupHtml(projectId, projectTasks) {
+  const stats = getCodeProjectStats(projectTasks);
+  const repo = getProjectRepo(projectId);
+  const cards = sortOverviewTasks(
+    projectTasks.filter((task) => !task.archived),
+    'code',
+  )
+    .map(overviewCodeTaskHtml)
+    .join('');
+
+  return `<section class="overview-project-group overview-code-project-group">
+    <div class="overview-code-project-header">
+      <h3 class="overview-project-name">${escapeHtml(projectLabel(projectId))}</h3>
+      <span class="overview-code-repo">${escapeHtml(repo)}</span>
+      <div class="overview-code-stats">${overviewCodeStatsPillsHtml(stats)}</div>
+    </div>
+    <div class="overview-card-grid">${cards}${overviewCreateCardHtml(projectId)}</div>
+  </section>`;
+}
+
+function renderProjectOverview() {
+  const container = $('#project-overview-content');
+  if (!container) return;
+
+  let html = '';
+  if (activeAppMode === 'chat') {
+    const chats = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+    const groups = groupTasksByProject(chats);
+    html = `<header class="overview-header">
+      <h2>Conversations</h2>
+      <p class="overview-subtitle">Recap of chats across your projects</p>
+    </header>
+    <div class="overview-project-groups">`;
+    groups.forEach((projectTasks, projectId) => {
+      const cards = sortOverviewTasks(
+        projectTasks.filter((task) => !task.archived && !task.draft),
+        'chat',
+      )
+        .map(overviewChatCardHtml)
+        .join('');
+      html += `<section class="overview-project-group">
+        <h3 class="overview-project-name">${escapeHtml(projectLabel(projectId))}</h3>
+        <div class="overview-card-grid">
+          ${cards}${overviewCreateCardHtml(projectId)}
+        </div>
+      </section>`;
+    });
+    html += '</div>';
+  } else if (activeAppMode === 'design') {
+    const artifacts = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+    const groups = groupTasksByProject(artifacts);
+    html = `<header class="overview-header">
+      <h2>Artifacts</h2>
+      <p class="overview-subtitle">Prototype previews grouped by project</p>
+    </header>
+    <div class="overview-project-groups">`;
+    groups.forEach((projectTasks, projectId) => {
+      const cards = sortOverviewTasks(
+        projectTasks.filter((task) => !task.archived && !task.draft),
+        'design',
+      )
+        .map(overviewDesignCardHtml)
+        .join('');
+      html += `<section class="overview-project-group">
+        <h3 class="overview-project-name">${escapeHtml(projectLabel(projectId))}</h3>
+        <div class="overview-card-grid">
+          ${cards}${overviewCreateCardHtml(projectId)}
+        </div>
+      </section>`;
+    });
+    html += '</div>';
+  } else {
+    const codeTasks = tasks.filter((task) => task.repo !== 'design' && !task.archived);
+    const groups = groupTasksByProject(codeTasks);
+    html = `<header class="overview-header">
+      <h2>Repositories</h2>
+      <p class="overview-subtitle">Code activity, PRs, and agent status by project</p>
+    </header>
+    <div class="overview-project-groups">`;
+    groups.forEach((projectTasks, projectId) => {
+      html += overviewCodeProjectGroupHtml(projectId, projectTasks);
+    });
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+  initIcons(container);
+  bindProjectOverviewEvents(container);
+}
+
+function openOverviewCreate(projectId) {
+  setSubheaderView('project', projectId, { skipOpenTask: true });
+  if (activeAppMode === 'code') startNewCodeTask();
+  else startNewConversation();
+}
+
+function openOverviewTask(taskId) {
+  const task = getTask(taskId);
+  if (!task) return;
+  setSubheaderView('project', task.project || 'kimchi');
+  openTaskDetail(taskId);
+}
+
+function bindProjectOverviewEvents(container) {
+  container.querySelectorAll('[data-task-id]').forEach((el) => {
+    el.addEventListener('click', () => openOverviewTask(el.dataset.taskId));
+  });
+  container.querySelectorAll('[data-create-project]').forEach((el) => {
+    el.addEventListener('click', () => openOverviewCreate(el.dataset.createProject));
+  });
+}
+
+function initSubheaderNav() {
+  $('#subheader-overview-btn')?.addEventListener('click', () => {
+    setSubheaderView('overview');
+  });
+
+  $$('.repo-tab:not(.add-repo):not(.repo-tab-overview)').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      setSubheaderView('project', tab.dataset.repo || 'all');
+    });
+  });
+}
+
+async function buildDesignPrototypeHtml(prompt, taskId = null) {
+  if (taskId && DESIGN_TASK_ARTIFACTS[taskId]) {
+    return DESIGN_TASK_ARTIFACTS[taskId]();
+  }
+
   const lower = prompt.toLowerCase();
   const title = prompt.split('\n')[0].trim() || 'Prototype';
 
-  if (lower.includes('budget')) {
+  if (/\b(empty|onboarding|first-run|zero)\b/.test(lower)) {
+    return loadBudgetEmptyStatesHtml();
+  }
+
+  if (/\b(edit|editing|threshold|alert flow|validation)\b/.test(lower)) {
+    return loadBudgetEditingFlowHtml();
+  }
+
+  if (lower.includes('budget') || lower.includes('overview')) {
     return loadBudgetPrototypeHtml();
   }
 
@@ -1698,22 +2682,29 @@ async function handleDesignChat(text, { skipUserBubble = false } = {}) {
   const container = $('#design-chat-messages');
   if (!container) return;
 
+  const task = getTask(activeTaskId);
   container.querySelector('.design-chat-welcome')?.remove();
-  if (!skipUserBubble) appendUserBubble(container, text);
+  if (!skipUserBubble) {
+    appendUserBubble(container, text);
+    applyModelToTask(task);
+    persistModeChatMessage(task, 'design', { role: 'user', text });
+  }
 
   let typing = showTyping(container);
   await sleep(900 + Math.random() * 500);
   typing.remove();
 
-  const html = await buildDesignPrototypeHtml(text);
+  const html = await buildDesignPrototypeHtml(text, task?.id);
   designArtifactHtml = html;
   renderDesignArtifact(html);
 
-  appendAgentTimeline(container, [{
+  const replySteps = [{
     type: 'text',
     dot: 'gray',
     html: `<p>Built a standalone HTML &amp; CSS prototype for <strong>${escapeHtml(text.split('\n')[0].trim())}</strong>. Preview it in the artifact panel.</p>`,
-  }]);
+  }];
+  appendAgentTimeline(container, replySteps);
+  persistModeChatMessage(task, 'design', { role: 'agent', steps: replySteps });
 }
 
 function initDesignChat() {
@@ -1804,7 +2795,8 @@ function getSidebarBucket(task, mode = activeAppMode) {
   if (task.archived) return 'archive';
 
   if (mode === 'code') {
-    if (task.status === 'backlog' || task.status === 'in-progress') return 'active';
+    if (task.status === 'backlog') return 'active';
+    if (task.status === 'in-progress') return 'in-progress';
     if (task.status === 'review' && task.reviewReason === 'needs-input') return 'needs-input';
     if (task.status === 'review' && task.reviewReason === 'ready') return 'done';
     if (task.status === 'closed') return 'merged';
@@ -1827,9 +2819,609 @@ function defaultProjectForNewTask() {
   return activeRepo === 'all' ? 'kimchi' : activeRepo;
 }
 
+const PROJECT_LABELS = {
+  kimchi: 'Kimchi',
+  'one-click': 'One-click',
+  hackathon: 'Hackathon',
+};
+
+const PROJECT_REPOS = {
+  kimchi: 'cast-ai/kimchi-studio',
+  'one-click': 'cast-ai/one-click',
+  hackathon: 'cast-ai/hackathon',
+};
+
+function projectLabel(projectId) {
+  return PROJECT_LABELS[projectId] || projectId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function getProjectRepo(projectId) {
+  return PROJECT_REPOS[projectId] || `cast-ai/${projectId}`;
+}
+
+const OVERVIEW_STATUS_ORDER = {
+  chat: {
+    'needs-input': 0,
+    ready: 1,
+    'in-progress': 2,
+    backlog: 3,
+  },
+  design: {
+    'needs-input': 0,
+    done: 1,
+    'in-progress': 2,
+  },
+  code: {
+    'needs-input': 0,
+    done: 1,
+    'in-progress': 2,
+    active: 3,
+    merged: 4,
+  },
+};
+
+const REVIEW_WAITING_OFFSETS = {
+  t2: 2 * 60 * 60 * 1000,
+  t4: 45 * 60 * 1000,
+  t5: 18 * 60 * 60 * 1000,
+  t6: 3 * 60 * 60 * 1000,
+  t9: 5 * 60 * 60 * 1000,
+  t10: 30 * 60 * 1000,
+};
+
+function hydrateReviewWaitingTimes() {
+  tasks.forEach((task) => {
+    if (task.status === 'review' && REVIEW_WAITING_OFFSETS[task.id]) {
+      task.reviewSince = Date.now() - REVIEW_WAITING_OFFSETS[task.id];
+    }
+  });
+}
+
+function formatWaitingDuration(ms) {
+  const minutes = Math.max(1, Math.floor(ms / 60000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function formatWaitingTooltip(ms) {
+  const minutes = Math.max(1, Math.floor(ms / 60000));
+  if (minutes < 60) {
+    return `Agent waiting for ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remMin = minutes % 60;
+  if (hours < 24) {
+    if (remMin === 0) {
+      return `Agent waiting for ${hours} hour${hours === 1 ? '' : 's'}`;
+    }
+    return `Agent waiting for ${hours}h ${remMin}m`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  if (remHours === 0) {
+    return `Agent waiting for ${days} day${days === 1 ? '' : 's'}`;
+  }
+  return `Agent waiting for ${days}d ${remHours}h`;
+}
+
+const WAITING_DOT_ACTIVATE_MIN = [15, 45, 90, 180];
+const WAITING_DOT_ESCALATE_MIN = [120, 240, 480, 720];
+
+function getWaitingDotStates(ms) {
+  const minutes = ms / 60000;
+
+  return WAITING_DOT_ACTIVATE_MIN.map((activateAt, index) => {
+    if (minutes < activateAt) return 'grey';
+    if (minutes < WAITING_DOT_ESCALATE_MIN[index]) return 'yellow';
+    return 'orange';
+  });
+}
+
+function overviewWaitingDotsHtml(task, mode) {
+  const since = getOverviewWaitingSince(task, mode);
+  if (!since) return '';
+
+  const elapsed = Date.now() - since;
+  const tooltip = formatWaitingTooltip(elapsed);
+  const dots = getWaitingDotStates(elapsed)
+    .map((state) => `<span class="overview-waiting-dot ${state}" aria-hidden="true"></span>`)
+    .join('');
+
+  return `<span class="overview-waiting-dots has-tooltip" data-tooltip="${escapeHtml(tooltip)}" role="img" aria-label="${escapeHtml(tooltip)}">${dots}</span>`;
+}
+
+function getOverviewStatusBucket(task, mode) {
+  if (mode === 'chat') {
+    if (task.chatReviewReason === 'needs-input') return 'needs-input';
+    if (task.chatReviewReason === 'ready') return 'ready';
+    if (task.draft) return 'backlog';
+    return 'in-progress';
+  }
+  return getSidebarBucket(task, mode);
+}
+
+function getOverviewWaitingSince(task, mode) {
+  if (mode === 'chat') {
+    if (task.chatReviewReason === 'needs-input' || task.chatReviewReason === 'ready') {
+      return task.chatReviewSince;
+    }
+    return null;
+  }
+
+  const bucket = getSidebarBucket(task, mode);
+  if (bucket === 'needs-input' || bucket === 'done') return task.reviewSince;
+  return null;
+}
+
+function overviewCardFooterHtml(task, mode, fallbackMeta, status) {
+  const waitingHtml = overviewWaitingDotsHtml(task, mode);
+
+  return `<div class="overview-card-footer">
+    <span class="overview-card-meta">${escapeHtml(fallbackMeta)}</span>
+    <div class="overview-card-status-group">
+      ${waitingHtml}
+      <span class="overview-status-pill ${status.cls}">${escapeHtml(status.label)}</span>
+    </div>
+  </div>`;
+}
+
+function sortOverviewTasks(taskList, mode) {
+  const order = OVERVIEW_STATUS_ORDER[mode] || {};
+
+  return [...taskList].sort((a, b) => {
+    const bucketA = getOverviewStatusBucket(a, mode);
+    const bucketB = getOverviewStatusBucket(b, mode);
+    const rankA = order[bucketA] ?? 99;
+    const rankB = order[bucketB] ?? 99;
+    if (rankA !== rankB) return rankA - rankB;
+
+    const waitA = getOverviewWaitingSince(a, mode) || Number.MAX_SAFE_INTEGER;
+    const waitB = getOverviewWaitingSince(b, mode) || Number.MAX_SAFE_INTEGER;
+    if (waitA !== waitB) return waitA - waitB;
+
+    return a.title.localeCompare(b.title);
+  });
+}
+
+function isProjectEmpty() {
+  return getFirstTaskIdForProject() === null;
+}
+
+function shouldShowEmptyCompose() {
+  const task = getTask(activeTaskId);
+  if (activeAppMode === 'code') {
+    if (isProjectEmpty()) return true;
+    return task?.status === 'backlog';
+  }
+  if (isProjectEmpty()) return true;
+  return task?.draft === true;
+}
+
+function populateProjectEmptyInput(task) {
+  const input = $('#project-empty-input');
+  if (!input) return;
+
+  if (task?.draft) {
+    input.value = '';
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 200)}px`;
+    return;
+  }
+
+  if (task?.status === 'backlog' && activeAppMode === 'code') {
+    input.value = task.description || task.title;
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 200)}px`;
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  input.placeholder = 'Plan, Build, / for skills, @ for context';
+}
+
+function applyProjectEmptyModeUi() {
+  const title = $('#project-empty-title');
+  const branchChip = $('#project-empty-branch-chip');
+  const runtimeWrap = $('#project-empty-runtime-wrap');
+  const startBtn = $('#project-empty-start-btn');
+  const showCodeControls = activeAppMode === 'code';
+
+  if (title) {
+    if (activeAppMode === 'chat') title.textContent = 'New chat';
+    else if (activeAppMode === 'design') title.textContent = 'New artifact';
+    else title.textContent = 'New task';
+  }
+
+  branchChip?.toggleAttribute('hidden', !showCodeControls);
+  runtimeWrap?.toggleAttribute('hidden', !showCodeControls);
+  startBtn?.toggleAttribute('hidden', activeAppMode !== 'code');
+  closeProjectEmptyMenus();
+
+  const input = $('#project-empty-input');
+  if (input) {
+    if (activeAppMode === 'chat') {
+      input.placeholder = 'Ask anything…';
+    } else if (activeAppMode === 'design') {
+      input.placeholder = 'Describe a screen to prototype…';
+    } else {
+      input.placeholder = 'Plan, Build, / for skills, @ for context';
+    }
+  }
+
+  placeProjectEmptyModelSelect();
+  updateChatComposeTitles();
+}
+
+function placeProjectEmptyModelSelect() {
+  const model = $('#project-empty-model-select');
+  const headerEnd = $('#project-empty-header-end');
+  const footerTools = $('.project-empty-input-tools');
+  if (!model || !headerEnd || !footerTools) return;
+
+  if (activeAppMode === 'code') {
+    if (!footerTools.contains(model)) footerTools.appendChild(model);
+  } else if (!headerEnd.contains(model)) {
+    headerEnd.appendChild(model);
+  }
+}
+
+function updateChatComposeTitles() {
+  const generalTitle = $('#general-chat-compose-title');
+  const designTitle = $('#design-chat-compose-title');
+  const task = getTask(activeTaskId);
+
+  if (generalTitle) {
+    generalTitle.textContent = task && !task.draft
+      ? task.title
+      : 'New chat';
+  }
+
+  if (designTitle) {
+    designTitle.textContent = task && !task.draft
+      ? task.title
+      : 'New artifact';
+  }
+}
+
+function getActiveModelSelectWrap() {
+  if (shouldShowEmptyCompose()) return $('#project-empty-model-select');
+  if (activeAppMode === 'chat') return $('#general-chat-model-select');
+  if (activeAppMode === 'design') return $('#design-chat-model-select');
+  return null;
+}
+
+function getModelFromActiveCompose() {
+  const wrap = getActiveModelSelectWrap();
+  return wrap?.querySelector('input[type="hidden"]')?.value || 'multi';
+}
+
+function syncModelSelects(task) {
+  const model = task?.model || 'multi';
+  [
+    $('#project-empty-model-select'),
+    $('#general-chat-model-select'),
+    $('#design-chat-model-select'),
+  ].forEach((wrap) => {
+    if (wrap) setRichSelectValue(wrap, MODEL_OPTIONS, model);
+  });
+}
+
+function applyModelToTask(task) {
+  if (!task) return;
+  task.model = getModelFromActiveCompose();
+}
+
+function getProjectEmptyComposeSettings() {
+  const permInput = $('#project-empty-permissions-select')?.querySelector('input[type="hidden"]');
+  const deliveryInput = $('#project-empty-delivery-select')?.querySelector('input[type="hidden"]');
+  return {
+    permissionMode: permInput?.value || 'yolo',
+    deliveryMode: deliveryInput?.value || 'manual',
+    model: getModelFromActiveCompose(),
+  };
+}
+
+function syncTaskComposeSelects(task) {
+  setRichSelectValue(
+    $('#task-permissions-select'),
+    PERMISSION_MODES,
+    task?.permissionMode || 'ask-edits',
+  );
+  setRichSelectValue(
+    $('#task-model-select'),
+    MODEL_OPTIONS,
+    task?.model || 'multi',
+  );
+  setRichSelectValue(
+    $('#task-delivery-select'),
+    DELIVERY_MODES,
+    task?.deliveryMode || 'manual',
+  );
+}
+
+function syncProjectEmptySelects(task) {
+  const permWrap = $('#project-empty-permissions-select');
+  const deliveryWrap = $('#project-empty-delivery-select');
+  const modelWrap = $('#project-empty-model-select');
+  if (!permWrap || !deliveryWrap || !modelWrap) return;
+
+  setRichSelectValue(
+    permWrap,
+    PERMISSION_MODES,
+    task?.permissionMode || permWrap.dataset.default || 'yolo',
+  );
+  setRichSelectValue(
+    deliveryWrap,
+    DELIVERY_MODES,
+    task?.deliveryMode || deliveryWrap.dataset.default || 'manual',
+  );
+  setRichSelectValue(
+    modelWrap,
+    MODEL_OPTIONS,
+    task?.model || modelWrap.dataset.default || 'multi',
+  );
+  syncModelSelects(task);
+}
+
+function updateProjectEmptyState() {
+  if (subheaderView === 'overview') return;
+
+  const show = shouldShowEmptyCompose();
+  const taskMain = $('.task-main');
+  const emptyEl = $('#project-empty-state');
+
+  taskMain?.classList.toggle('is-project-empty', show);
+  if (emptyEl) {
+    emptyEl.hidden = !show;
+    if (show) {
+      applyProjectEmptyModeUi();
+      populateProjectEmptyInput(getTask(activeTaskId));
+      syncProjectEmptySelects(getTask(activeTaskId));
+      const label = $('#project-empty-project-label');
+      if (label) {
+        label.textContent = activeRepo === 'all'
+          ? 'studio-prototype'
+          : projectLabel(activeRepo);
+      }
+      initIcons(emptyEl);
+    }
+  }
+}
+
+function createTaskFromEmptyState(description, { startImmediately = false } = {}) {
+  const trimmed = description.trim();
+  if (!trimmed) return null;
+
+  const title = trimmed.split('\n')[0].trim() || trimmed;
+  const status = activeAppMode === 'code' && !startImmediately
+    ? 'backlog'
+    : 'in-progress';
+  const { permissionMode, deliveryMode, model } = getProjectEmptyComposeSettings();
+
+  const task = {
+    id: uid(),
+    title,
+    description: trimmed,
+    repo: defaultRepoForNewTask(),
+    project: defaultProjectForNewTask(),
+    status,
+    permissionMode,
+    deliveryMode,
+    model,
+    prs: 0,
+    commits: 0,
+    files: 0,
+    additions: 0,
+    deletions: 0,
+    chat: [],
+  };
+  tasks.push(task);
+
+  if (startImmediately && activeAppMode === 'code') {
+    moveTaskToInProgress(task);
+  }
+
+  renderBoard();
+  openTaskDetail(task.id);
+  return task;
+}
+
+function startTaskFromBacklogCompose(description) {
+  const task = getTask(activeTaskId);
+  if (!task || task.status !== 'backlog' || activeAppMode !== 'code') return null;
+
+  const text = description.trim();
+  if (!text) return null;
+
+  task.description = text;
+  task.title = text.split('\n')[0].trim() || text;
+  task.draft = false;
+  Object.assign(task, getProjectEmptyComposeSettings());
+  $('#task-detail-title').textContent = task.title;
+  moveTaskToInProgress(task);
+  renderBoard();
+  updateTaskDetailLayout(task);
+  updateProjectEmptyState();
+  renderTaskChat();
+  renderDiff();
+  syncTaskComposeSelects(task);
+  if (!task.workSimulated && task.chat.length === 0) {
+    runTaskAgentWork(task);
+  }
+  return task;
+}
+
+function submitProjectEmptyInput() {
+  const input = $('#project-empty-input');
+  if (!input) return;
+
+  let text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  const task = getTask(activeTaskId);
+  if (task?.draft && activeAppMode !== 'code') {
+    startDraftFromEmptyCompose(text);
+    return;
+  }
+
+  if (task?.status === 'backlog' && activeAppMode === 'code') {
+    startTaskFromBacklogCompose(text);
+    return;
+  }
+
+  createTaskFromEmptyState(text, { startImmediately: activeAppMode === 'code' });
+}
+
+function focusProjectEmptyInput(placeholder) {
+  const input = $('#project-empty-input');
+  if (!input) return;
+  input.focus();
+  if (!input.value.trim() && placeholder) {
+    input.placeholder = placeholder;
+  }
+}
+
+let projectEmptyRuntime = 'this-mac';
+
+const PROJECT_EMPTY_RUNTIME_OPTIONS = {
+  'this-mac': { label: 'Local', icon: 'laptop' },
+  'new-worktree': { label: 'New Worktree', icon: 'git-branch' },
+};
+
+function closeProjectEmptyMenus() {
+  const menu = $('#project-empty-runtime-menu');
+  const trigger = $('#project-empty-runtime-trigger');
+  if (menu) menu.hidden = true;
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+}
+
+function setProjectEmptyRuntime(value) {
+  projectEmptyRuntime = value;
+  const menu = $('#project-empty-runtime-menu');
+  const trigger = $('#project-empty-runtime-trigger');
+  const labelEl = $('#project-empty-runtime-label');
+  const iconEl = $('#project-empty-runtime-icon');
+  const option = PROJECT_EMPTY_RUNTIME_OPTIONS[value] || PROJECT_EMPTY_RUNTIME_OPTIONS['this-mac'];
+
+  if (menu) {
+    menu.querySelectorAll('.project-empty-chip-option').forEach((item) => {
+      const selected = item.dataset.value === value;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-selected', String(selected));
+    });
+  }
+
+  if (labelEl) labelEl.textContent = option.label;
+  if (iconEl) {
+    iconEl.dataset.icon = option.icon;
+    initIcons(trigger);
+  }
+}
+
+function initProjectEmptyRuntimeMenu() {
+  const wrap = $('#project-empty-runtime-wrap');
+  const trigger = $('#project-empty-runtime-trigger');
+  const menu = $('#project-empty-runtime-menu');
+  if (!wrap || !trigger || !menu) return;
+
+  setProjectEmptyRuntime(projectEmptyRuntime);
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeRichSelects();
+    const open = menu.hidden;
+    closeProjectEmptyMenus();
+    if (open) {
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      initIcons(menu);
+    }
+  });
+
+  menu.addEventListener('click', (e) => {
+    const option = e.target.closest('.project-empty-chip-option');
+    if (!option) return;
+    setProjectEmptyRuntime(option.dataset.value);
+    closeProjectEmptyMenus();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#project-empty-runtime-wrap')) return;
+    closeProjectEmptyMenus();
+  });
+}
+
+function initProjectEmptyState() {
+  const input = $('#project-empty-input');
+  const startBtn = $('#project-empty-start-btn');
+
+  if (!input) return;
+
+  const submit = () => submitProjectEmptyInput();
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 200)}px`;
+  });
+
+  startBtn?.addEventListener('click', () => {
+    if (!input.value.trim()) {
+      input.focus();
+      return;
+    }
+    submit();
+  });
+}
+
+function addEmptyProject(name) {
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `project-${uid().slice(0, 6)}`;
+  if (PROJECT_LABELS[slug]) return slug;
+
+  PROJECT_LABELS[slug] = name.trim() || 'New project';
+  PROJECT_REPOS[slug] = `cast-ai/${slug}`;
+
+  const tabs = $('.repo-tabs');
+  const addBtn = $('#new-project-btn');
+  if (!tabs || !addBtn) return slug;
+
+  const tab = document.createElement('button');
+  tab.type = 'button';
+  tab.className = 'repo-tab';
+  tab.dataset.repo = slug;
+  tab.textContent = PROJECT_LABELS[slug];
+  tab.addEventListener('click', () => {
+    setSubheaderView('project', slug);
+  });
+
+  tabs.insertBefore(tab, addBtn);
+  setSubheaderView('project', slug);
+  projectDirectories[slug] = createProjectDirectory();
+  return slug;
+}
+
+function initNewProjectButton() {
+  $('#new-project-btn')?.addEventListener('click', () => {
+    addEmptyProject('New project');
+  });
+}
+
 function syncReviewReason(task) {
   if (task.status !== 'review') {
     task.reviewReason = null;
+    task.reviewSince = null;
     return;
   }
   if (!task.reviewReason) {
@@ -1837,6 +3429,7 @@ function syncReviewReason(task) {
       ? 'needs-input'
       : 'ready';
   }
+  if (!task.reviewSince) task.reviewSince = Date.now();
 }
 
 function getReviewReasonMeta(task) {
@@ -1971,7 +3564,14 @@ function startTask(taskId) {
   if (!task) return;
   moveTaskToInProgress(task);
   renderBoard();
-  renderTaskSidebar();
+  if (activeTaskId === task.id) {
+    updateTaskDetailLayout(task);
+    renderTaskChat();
+    renderDiff();
+    if (!task.workSimulated && task.chat.length === 0) {
+      runTaskAgentWork(task);
+    }
+  }
 }
 
 function startAllColumnTasks(status) {
@@ -2270,6 +3870,226 @@ function renderBoardWorkspaceStats() {
 function renderBoardSubheader() {
   closeWorkspaceStatsMenu();
   renderBoardWorkspaceStats();
+  renderDirectoryCounts();
+}
+
+function pluralize(count, singular, plural = `${singular}s`) {
+  return count === 1 ? singular : plural;
+}
+
+function renderDirectoryCounts() {
+  const skillsBtn = $('#subheader-skills-btn');
+  const connectorsBtn = $('#subheader-connectors-btn');
+  const skillCount = getScopedActiveSkills().size;
+  const connectorCount = getScopedActiveConnectors().size;
+
+  if (skillsBtn) {
+    skillsBtn.textContent = `${skillCount} ${pluralize(skillCount, 'skill')}`;
+  }
+  if (connectorsBtn) {
+    connectorsBtn.textContent = `${connectorCount} ${pluralize(connectorCount, 'connector')}`;
+  }
+}
+
+function openDirectoryModal(section = 'skills') {
+  const modal = $('#directory-modal');
+  if (!modal) return;
+
+  directoryState.section = section;
+  directoryState.search = '';
+  const search = $('#directory-search');
+  if (search) search.value = '';
+
+  renderDirectoryModal();
+  modal.showModal();
+  initIcons(modal);
+  search?.focus();
+}
+
+function closeDirectoryModal() {
+  $('#directory-modal')?.close();
+}
+
+function setDirectorySection(section) {
+  directoryState.section = section;
+  directoryState.search = '';
+  const search = $('#directory-search');
+  if (search) {
+    search.value = '';
+    search.placeholder = section === 'connectors'
+      ? 'Search connectors…'
+      : 'Search skills…';
+  }
+  renderDirectoryModal();
+}
+
+function directorySkillMatchesSource(skill) {
+  if (directoryState.sourceTab === 'organization') return skill.source === 'organization';
+  if (directoryState.sourceTab === 'anthropic') return skill.source === 'anthropic';
+  return skill.source === 'shared' || skill.source === 'organization';
+}
+
+function directoryMatchesSearch(text) {
+  const query = directoryState.search.trim().toLowerCase();
+  if (!query) return true;
+  return text.toLowerCase().includes(query);
+}
+
+function directorySkillCardHtml(skill) {
+  const active = isSkillActiveInScope(skill.id);
+  const actionHtml = isDirectoryAllProjects() ? '' : `
+      <button type="button" class="directory-card-action" data-directory-toggle="skill" data-directory-id="${skill.id}" aria-label="${active ? 'Manage skill' : 'Add skill'}">
+        <span class="icon-slot" data-icon="${active ? 'settings' : 'plus'}" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+      </button>`;
+
+  return `<article class="directory-card" data-directory-id="${skill.id}" data-directory-type="skill">
+    <div class="directory-card-top">
+      <div class="directory-card-title">${escapeHtml(skill.slug)}</div>
+      ${actionHtml}
+    </div>
+    <div class="directory-card-meta">${escapeHtml(skill.author)} · ${skill.uses}</div>
+    ${directoryProjectsHtml('skill', skill.id)}
+    <p class="directory-card-desc">${escapeHtml(skill.desc)}</p>
+  </article>`;
+}
+
+function directoryConnectorCardHtml(connector) {
+  const active = isConnectorActiveInScope(connector.id);
+  const actionHtml = isDirectoryAllProjects() ? '' : `
+      <button type="button" class="directory-card-action" data-directory-toggle="connector" data-directory-id="${connector.id}" aria-label="${active ? 'Manage connector' : 'Connect'}">
+        <span class="icon-slot" data-icon="${active ? 'settings' : 'plus'}" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+      </button>`;
+
+  return `<article class="directory-card directory-card-connector" data-directory-id="${connector.id}" data-directory-type="connector">
+    <div class="directory-card-top">
+      <div class="directory-card-brand">
+        <span class="directory-card-logo" style="background:${connector.color}">${escapeHtml(connector.letter)}</span>
+        <div>
+          <div class="directory-card-title">${escapeHtml(connector.name)}</div>
+          ${connector.badge ? `<div class="directory-card-badge">${escapeHtml(connector.badge)}</div>` : ''}
+        </div>
+      </div>
+      ${actionHtml}
+    </div>
+    ${directoryProjectsHtml('connector', connector.id)}
+    <p class="directory-card-desc">${escapeHtml(connector.desc)}</p>
+  </article>`;
+}
+
+function renderDirectoryModal() {
+  const modal = $('#directory-modal');
+  if (!modal) return;
+
+  const title = $('#directory-modal-title');
+  if (title) title.textContent = getDirectoryModalTitle();
+
+  const { section } = directoryState;
+  const sourceTabs = $('#directory-source-tabs');
+  const sectionLabel = $('#directory-section-label');
+  const grid = $('#directory-grid');
+
+  modal.querySelectorAll('.directory-nav-item').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.directorySection === section);
+  });
+
+  if (sourceTabs) {
+    if (section === 'skills') {
+      const tabs = [
+        { id: 'organization', label: 'Your organization' },
+        { id: 'shared', label: 'Shared' },
+        { id: 'anthropic', label: 'Anthropic' },
+      ];
+      sourceTabs.hidden = false;
+      sourceTabs.innerHTML = tabs.map((tab) => `
+        <button type="button" class="directory-source-tab${directoryState.sourceTab === tab.id ? ' active' : ''}" data-directory-source="${tab.id}">
+          ${escapeHtml(tab.label)}
+        </button>`).join('');
+    } else {
+      sourceTabs.hidden = false;
+      sourceTabs.innerHTML = `<span class="directory-source-chip">Anthropic &amp; Partners</span>`;
+    }
+  }
+
+  if (sectionLabel) {
+    if (section === 'connectors') sectionLabel.textContent = 'Available to your team';
+    else sectionLabel.textContent = 'Available skills';
+  }
+
+  if (!grid) return;
+
+  let cards = '';
+  if (section === 'skills') {
+    cards = DIRECTORY_SKILLS
+      .filter((skill) => directorySkillMatchesSource(skill))
+      .filter((skill) => directoryMatchesSearch(`${skill.slug} ${skill.author} ${skill.desc}`))
+      .map(directorySkillCardHtml)
+      .join('');
+  } else {
+    cards = DIRECTORY_CONNECTORS
+      .filter((connector) => directoryMatchesSearch(`${connector.name} ${connector.desc}`))
+      .map(directoryConnectorCardHtml)
+      .join('');
+  }
+
+  grid.innerHTML = cards || `<div class="directory-empty">No matches found.</div>`;
+  initIcons(modal);
+}
+
+function toggleDirectoryItem(type, id) {
+  if (isDirectoryAllProjects()) return;
+
+  const dir = getProjectDirectory(activeRepo);
+  const set = type === 'skill' ? dir.activeSkills : dir.activeConnectors;
+
+  if (set.has(id)) set.delete(id);
+  else set.add(id);
+
+  renderDirectoryCounts();
+  renderDirectoryModal();
+}
+
+function initDirectoryModal() {
+  const modal = $('#directory-modal');
+  if (!modal || modal.dataset.bound) return;
+  modal.dataset.bound = 'true';
+
+  $('#subheader-skills-btn')?.addEventListener('click', () => openDirectoryModal('skills'));
+  $('#subheader-connectors-btn')?.addEventListener('click', () => openDirectoryModal('connectors'));
+  $('#directory-modal-close')?.addEventListener('click', () => closeDirectoryModal());
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeDirectoryModal();
+  });
+
+  modal.addEventListener('close', closeSidebarItemMenus);
+
+  modal.querySelector('.directory-nav')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-directory-section]');
+    if (!btn) return;
+    setDirectorySection(btn.dataset.directorySection);
+  });
+
+  $('#directory-search')?.addEventListener('input', (e) => {
+    directoryState.search = e.target.value;
+    renderDirectoryModal();
+  });
+
+  modal.addEventListener('click', (e) => {
+    const sourceTab = e.target.closest('[data-directory-source]');
+    if (sourceTab) {
+      directoryState.sourceTab = sourceTab.dataset.directorySource;
+      renderDirectoryModal();
+      return;
+    }
+
+    const toggle = e.target.closest('[data-directory-toggle]');
+    if (toggle) {
+      e.preventDefault();
+      toggleDirectoryItem(toggle.dataset.directoryToggle, toggle.dataset.directoryId);
+    }
+  });
+
+  renderDirectoryCounts();
 }
 
 function uid() {
@@ -2979,6 +4799,10 @@ function openFirstTaskForProject() {
   }
   renderBoardSubheader();
   renderTaskSidebar();
+  updateProjectEmptyState();
+  if (shouldShowEmptyCompose()) {
+    $('#project-empty-input')?.focus();
+  }
 }
 
 function openWorkspacesOverview() {
@@ -2988,7 +4812,7 @@ function openWorkspacesOverview() {
 }
 
 function getDefaultTaskId() {
-  const visible = tasksForTaskSidebar().filter((task) => !task.archived);
+  const visible = tasksForTaskSidebar().filter((task) => !task.archived && !task.draft);
   const preferred = visible.find((task) => task.status === 'review' && task.commits > 0)
     || visible.find((task) => task.status === 'in-progress')
     || visible.find((task) => task.status === 'backlog')
@@ -3029,35 +4853,58 @@ function openTaskDetail(taskId) {
   badge.textContent = STATUS_LABELS[task.status];
   badge.className = `status-badge ${task.status}`;
 
+  updateChatComposeTitles();
+
   updateTaskDetailLayout(task);
   renderBoardSubheader();
   renderTaskSidebar();
+  updateProjectEmptyState();
 
   if (activeAppMode === 'chat') {
+    if (shouldShowEmptyCompose()) {
+      showView('task');
+      $('#project-empty-input')?.focus();
+      return;
+    }
+    renderGeneralChatForTask(task);
+    syncModelSelects(task);
     showView('task');
     return;
   }
 
   if (activeAppMode !== 'code') {
+    if (shouldShowEmptyCompose()) {
+      renderDesignArtifact(null);
+      showView('task');
+      $('#project-empty-input')?.focus();
+      return;
+    }
+    renderDesignChatForTask(task);
+    syncModelSelects(task);
     if (task.repo === 'design' && task.status !== 'backlog') {
-      if (activeAppMode === 'chat') {
-        setAppMode('design', { loadTask: false });
-      }
-      buildDesignPrototypeHtml(task.title).then((html) => {
+      buildDesignPrototypeHtml(task.title, task.id).then((html) => {
+        if (activeTaskId !== task.id || activeAppMode !== 'design') return;
         designArtifactHtml = html;
         renderDesignArtifact(html);
       });
+    } else {
+      renderDesignArtifact(null);
     }
     showView('task');
     return;
   }
 
-  if (task.status !== 'backlog') {
-    renderTaskChat();
-    renderDiff();
-  } else {
-    renderBrowserPreview();
+  if (task.status === 'backlog') {
+    updateTaskDetailLayout(task);
+    showView('task');
+    updateProjectEmptyState();
+    $('#project-empty-input')?.focus();
+    return;
   }
+
+  renderTaskChat();
+  renderDiff();
+  syncTaskComposeSelects(task);
   showView('task');
 
   if (task.status === 'in-progress' && !task.workSimulated && task.chat.length === 0) {
@@ -3067,72 +4914,22 @@ function openTaskDetail(taskId) {
   }
 }
 
-function populateTaskSetupForm(task) {
-  $('#task-setup-description').value = task.description || task.title;
-  setRichSelectValue(
-    $('#task-setup-permissions-select'),
-    PERMISSION_MODES,
-    task.permissionMode || 'yolo',
-  );
-  setRichSelectValue(
-    $('#task-setup-model-select'),
-    MODEL_OPTIONS,
-    task.model || 'multi',
-  );
-}
-
-function applyTaskSetupForm(task) {
-  const form = $('#task-setup-form');
-  const fd = new FormData(form);
-  const description = $('#task-setup-description').value.trim();
-  if (description) {
-    task.description = description;
-    task.title = description.split('\n')[0].trim() || description;
-  }
-  task.permissionMode = fd.get('permissions');
-  task.model = fd.get('model');
-}
-
 function updateTaskDetailLayout(task) {
   const isBacklog = task.status === 'backlog';
-  $('#view-task').classList.toggle('task-detail--backlog', isBacklog);
-  $('#task-setup-panel').hidden = !isBacklog;
   $('#task-agent-active').hidden = isBacklog;
-  $('#work-panel-empty').hidden = !isBacklog;
   $('#work-panel-active').hidden = isBacklog;
-  $('#task-agent-panel-title').textContent = isBacklog ? 'Task setup' : 'Task agent';
+  $('#task-agent-panel-title').textContent = 'Task agent';
 
   if (isBacklog) {
-    populateTaskSetupForm(task);
     $('#task-chat-messages').innerHTML = '';
   }
-}
-
-function startTaskFromDetailSetup(e) {
-  e.preventDefault();
-  const task = getTask(activeTaskId);
-  if (!task || task.status !== 'backlog') return;
-
-  applyTaskSetupForm(task);
-  $('#task-detail-title').textContent = task.title;
-  moveTaskToInProgress(task);
-  renderBoard();
-  updateTaskDetailLayout(task);
-  renderTaskChat();
-  renderDiff();
-  if (!task.workSimulated && task.chat.length === 0) {
-    runTaskAgentWork(task);
-  }
-}
-
-function initTaskSetup() {
-  $('#task-setup-form').addEventListener('submit', startTaskFromDetailSetup);
 }
 
 /* ── Workspace header + sidebar refresh ── */
 function renderBoard() {
   renderBoardSubheader();
   renderTaskSidebar();
+  updateProjectEmptyState();
 }
 
 function getTaskCardElement(taskId) {
@@ -4389,6 +6186,26 @@ function getNeedsInputPrompt(task) {
         },
       ],
     },
+    t6: {
+      question: 'Should the alert threshold confirmation be a modal or an inline expand below the amount field?',
+      options: [
+        {
+          id: 'modal',
+          label: 'Modal confirmation',
+          summary: 'Show a confirmation modal before saving threshold changes.',
+        },
+        {
+          id: 'inline',
+          label: 'Inline expand',
+          summary: 'Reveal confirmation controls inline below the amount field.',
+        },
+        {
+          id: 'defer',
+          label: 'Defer to v2',
+          summary: 'Ship the edit flow now and track threshold confirmation separately.',
+        },
+      ],
+    },
   };
 
   return (
@@ -4528,6 +6345,35 @@ function getNeedsInputContinuationSteps(task, option) {
     ];
   }
 
+  if (task.id === 't6') {
+    const wiring = {
+      modal: 'ThresholdConfirmModal frame added after save tap',
+      inline: 'Inline expand panel below amount field',
+      defer: 'Threshold confirmation deferred — edit flow only',
+    };
+
+    return [
+      { type: 'label', dot: 'green', html: '<strong>Agent</strong> Updating edit flow prototype…' },
+      {
+        type: 'text',
+        dot: 'gray',
+        html: `<p>Using <strong>${escapeHtml(option.label)}</strong>. ${escapeHtml(option.summary)}</p>`,
+      },
+      {
+        type: 'bash',
+        dot: 'green',
+        label: '<strong>Bash</strong> Update threshold interaction',
+        in: `kimchi proto edit editing-flow.canvas --confirmation ${option.id}`,
+        out: `✓ ${wiring[option.id]}`,
+      },
+      {
+        type: 'text',
+        dot: 'gray',
+        html: '<p>Prototype updated in the artifact preview. Ready for another review pass when you are.</p>',
+      },
+    ];
+  }
+
   return [
     { type: 'label', dot: 'green', html: `<strong>${agentName}</strong> Continuing with your choice…` },
     {
@@ -4553,6 +6399,7 @@ function getNeedsInputContinuationSteps(task, option) {
 function resumeTaskFromNeedsInput(task) {
   task.status = 'in-progress';
   task.reviewReason = null;
+  task.reviewSince = null;
   task.workSimulated = false;
   clearWorkTarget(task);
 
@@ -4583,19 +6430,22 @@ function resumeTaskFromNeedsInput(task) {
 }
 
 async function handleNeedsInputAnswer(task, option, buttonEl) {
-  const container = $('#task-chat-messages');
+  const container = getActiveModeChatContainer();
+  if (!container) return;
+  const messages = getTaskModeMessages(task);
+
   const actionGroup = buttonEl.closest('.action-buttons');
   actionGroup?.querySelectorAll('.action-btn').forEach((btn) => {
     btn.disabled = true;
     btn.classList.toggle('selected', btn === buttonEl);
   });
 
-  if (task.workSteps?.length && task.chat.length === 0) {
-    task.chat.push({ role: 'agent', steps: task.workSteps });
+  if (task.workSteps?.length && messages.length === 0) {
+    messages.push({ role: 'agent', steps: task.workSteps });
   }
 
   appendUserBubble(container, option.label);
-  task.chat.push({ role: 'user', text: option.label });
+  messages.push({ role: 'user', text: option.label });
 
   resumeTaskFromNeedsInput(task);
 
@@ -4620,7 +6470,7 @@ async function handleNeedsInputAnswer(task, option, buttonEl) {
 
   if (runId !== taskWorkRunId || !recorded) return;
 
-  task.chat.push({ role: 'agent', steps: recorded });
+  messages.push({ role: 'agent', steps: recorded });
   updateTaskCardStats(task);
   renderBoard();
 }
@@ -5146,6 +6996,8 @@ function finishTaskToReview(task) {
   renderBoard();
   renderTaskSidebar();
   renderBoardWorkspaceStats();
+  renderAppModeTabBadges();
+  if (subheaderView === 'overview') renderProjectOverview();
   showTaskReviewSnackbar(task);
   assignNextSimulatedTask({ delay: 3000 });
 }
@@ -5312,9 +7164,14 @@ async function runTaskAgentWork(task) {
 function initTaskChat() {
   initChatInput('task-chat-input', handleTaskChat);
 
-  $('#task-chat-messages').addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
     const btn = e.target.closest('.action-btn[data-action^="needs-input:"]');
     if (!btn || btn.disabled) return;
+
+    const inTaskChat = btn.closest('#task-chat-messages');
+    const inGeneralChat = btn.closest('#general-chat-messages');
+    const inDesignChat = btn.closest('#design-chat-messages');
+    if (!inTaskChat && !inGeneralChat && !inDesignChat) return;
 
     const task = getTask(activeTaskId);
     if (!task || task.status !== 'review' || task.reviewReason !== 'needs-input') return;
@@ -5481,11 +7338,24 @@ function generateTaskResponse(text, task) {
 }
 
 /* ── Task Sidebar ── */
+function sidebarItemActionsHtml() {
+  return `<div class="sidebar-item-actions">
+    <button type="button" class="sidebar-item-menu-btn" aria-label="Conversation options" aria-haspopup="menu" aria-expanded="false">
+      ${iconHtml('ellipsis-vertical', { size: 14, className: 'lucide-icon lucide-muted' })}
+    </button>
+    <div class="sidebar-item-menu" hidden role="menu">
+      <button type="button" class="sidebar-item-menu-option" role="menuitem" data-action="rename">Rename</button>
+      <button type="button" class="sidebar-item-menu-option" role="menuitem" data-action="archive">Archive</button>
+    </div>
+  </div>`;
+}
+
 function sidebarTaskHtml(task) {
   const active = task.id === activeTaskId ? ' active' : '';
   return `<div class="sidebar-task${active}" data-id="${task.id}">
     <span class="sidebar-leading">${sidebarTaskLeadingHtml(task)}</span>
     <span class="sidebar-task-title">${escapeHtml(task.title)}</span>
+    ${sidebarItemActionsHtml()}
   </div>`;
 }
 
@@ -5493,7 +7363,109 @@ function sidebarChatItemHtml(task) {
   const active = task.id === activeTaskId ? ' active' : '';
   return `<div class="sidebar-chat${active}" data-id="${task.id}">
     <span class="sidebar-chat-title">${escapeHtml(task.title)}</span>
+    ${sidebarItemActionsHtml()}
   </div>`;
+}
+
+let openSidebarItemMenu = null;
+
+function closeSidebarItemMenus() {
+  if (!openSidebarItemMenu) return;
+  const { menu, trigger, wrap } = openSidebarItemMenu;
+  menu.hidden = true;
+  trigger?.setAttribute('aria-expanded', 'false');
+  wrap?.classList.remove('is-open');
+  openSidebarItemMenu = null;
+}
+
+function renameSidebarTask(taskId) {
+  const task = getTask(taskId);
+  if (!task) return;
+
+  const nextTitle = window.prompt('Rename conversation', task.title);
+  if (!nextTitle) return;
+
+  const trimmed = nextTitle.trim();
+  if (!trimmed || trimmed === task.title) return;
+
+  task.title = trimmed;
+  if (activeTaskId === task.id) {
+    $('#task-detail-title').textContent = task.title;
+    updateChatComposeTitles();
+  }
+  renderBoard();
+  renderTaskSidebar();
+}
+
+function archiveSidebarTask(taskId) {
+  const task = getTask(taskId);
+  if (!task || task.archived) return;
+
+  task.archived = true;
+
+  if (activeTaskId === task.id) {
+    const next = tasksForTaskSidebar().find((t) => !t.archived && t.id !== task.id);
+    if (next) {
+      openTaskDetail(next.id);
+    } else {
+      activeTaskId = null;
+      if (activeAppMode === 'chat' || activeAppMode === 'design') {
+        startNewConversation();
+      } else {
+        renderBoard();
+        updateProjectEmptyState();
+      }
+    }
+  }
+
+  renderBoard();
+  renderTaskSidebar();
+  renderAppModeTabBadges();
+}
+
+function initSidebarItemMenus(sidebar) {
+  sidebar.querySelectorAll('.sidebar-item-actions').forEach((wrap) => {
+    const trigger = wrap.querySelector('.sidebar-item-menu-btn');
+    const menu = wrap.querySelector('.sidebar-item-menu');
+    const item = wrap.closest('[data-id]');
+    const taskId = item?.dataset.id;
+    if (!trigger || !menu || !taskId) return;
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = openSidebarItemMenu?.wrap === wrap;
+      closeSidebarItemMenus();
+      closeRichSelects();
+      closeProjectEmptyMenus();
+      if (!isOpen) {
+        menu.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        wrap.classList.add('is-open');
+        openSidebarItemMenu = { wrap, trigger, menu };
+      }
+    });
+
+    menu.addEventListener('click', (e) => {
+      const option = e.target.closest('[data-action]');
+      if (!option) return;
+      e.stopPropagation();
+      const action = option.dataset.action;
+      closeSidebarItemMenus();
+      if (action === 'rename') renameSidebarTask(taskId);
+      if (action === 'archive') archiveSidebarTask(taskId);
+    });
+  });
+}
+
+function bindSidebarItemEvents(sidebar) {
+  sidebar.querySelectorAll('.sidebar-task, .sidebar-chat').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.sidebar-item-actions')) return;
+      openTaskDetail(el.dataset.id);
+    });
+  });
+
+  initSidebarItemMenus(sidebar);
 }
 
 function renderChatSidebar(sidebar) {
@@ -5511,11 +7483,9 @@ function renderChatSidebar(sidebar) {
 
   initIcons(sidebar);
 
-  sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewDesignChat);
+  sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewConversation);
 
-  sidebar.querySelectorAll('.sidebar-chat').forEach((el) => {
-    el.addEventListener('click', () => openTaskDetail(el.dataset.id));
-  });
+  bindSidebarItemEvents(sidebar);
 }
 
 function renderTaskSidebar() {
@@ -5574,7 +7544,7 @@ function renderTaskSidebar() {
     : `<div class="sidebar-create-wrap">
         <button type="button" class="sidebar-create-btn" id="sidebar-new-chat-btn">
           ${iconHtml('plus', { size: 12, className: 'lucide-icon' })}
-          New prototype
+          New artifact
         </button>
       </div>`;
 
@@ -5585,12 +7555,10 @@ function renderTaskSidebar() {
 
   initIcons(sidebar);
 
-  sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewDesignChat);
-  sidebar.querySelector('#sidebar-create-task-btn')?.addEventListener('click', openCreateTaskModal);
+  sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewConversation);
+  sidebar.querySelector('#sidebar-create-task-btn')?.addEventListener('click', startNewCodeTask);
 
-  sidebar.querySelectorAll('.sidebar-task').forEach((el) => {
-    el.addEventListener('click', () => openTaskDetail(el.dataset.id));
-  });
+  bindSidebarItemEvents(sidebar);
 
   sidebar.querySelectorAll('.sidebar-task-play').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -5655,6 +7623,7 @@ function initRichSelect(wrap, options) {
     e.stopPropagation();
     const isOpen = openRichSelect?.wrap === wrap;
     closeRichSelects();
+    closeProjectEmptyMenus();
     if (!isOpen) {
       menu.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
@@ -5680,13 +7649,47 @@ function initRichSelects() {
   initRichSelect($('#model-select'), MODEL_OPTIONS);
   initRichSelect($('#task-permissions-select'), PERMISSION_MODES);
   initRichSelect($('#task-model-select'), MODEL_OPTIONS);
-  initRichSelect($('#task-setup-permissions-select'), PERMISSION_MODES);
-  initRichSelect($('#task-setup-model-select'), MODEL_OPTIONS);
+  initRichSelect($('#task-delivery-select'), DELIVERY_MODES);
+  initRichSelect($('#project-empty-permissions-select'), PERMISSION_MODES);
+  initRichSelect($('#project-empty-delivery-select'), DELIVERY_MODES);
+  initRichSelect($('#project-empty-model-select'), MODEL_OPTIONS);
+  initRichSelect($('#general-chat-model-select'), MODEL_OPTIONS);
+  initRichSelect($('#design-chat-model-select'), MODEL_OPTIONS);
 
   document.addEventListener('click', (e) => {
     if (e.target.closest('.rich-select-wrap')) return;
     closeRichSelects();
+    closeProjectEmptyMenus();
+    closeSidebarItemMenus();
   });
+}
+
+function startNewCodeTask() {
+  const { permissionMode, deliveryMode, model } = getProjectEmptyComposeSettings();
+
+  const task = {
+    id: uid(),
+    title: 'New task',
+    description: '',
+    draft: true,
+    repo: defaultRepoForNewTask(),
+    project: defaultProjectForNewTask(),
+    status: 'backlog',
+    permissionMode,
+    deliveryMode,
+    model,
+    prs: 0,
+    commits: 0,
+    files: 0,
+    additions: 0,
+    deletions: 0,
+    chat: [],
+  };
+
+  tasks.unshift(task);
+  renderBoard();
+  openTaskDetail(task.id);
+  focusProjectEmptyInput('Plan, Build, / for skills, @ for context');
 }
 
 function openCreateTaskModal() {
@@ -5863,17 +7866,9 @@ function initEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-      openCreateTaskModal();
+      if (activeAppMode === 'code') startNewCodeTask();
+      else openCreateTaskModal();
     }
-  });
-
-  $$('.repo-tab:not(.add-repo)').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      $$('.repo-tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeRepo = tab.dataset.repo || 'all';
-      openFirstTaskForProject();
-    });
   });
 }
 
@@ -5886,6 +7881,9 @@ function initTooltips() {
     tooltip.hidden = true;
     document.body.appendChild(tooltip);
   }
+
+  if (document.documentElement.dataset.tooltipsBound) return;
+  document.documentElement.dataset.tooltipsBound = 'true';
 
   let activeAnchor = null;
 
@@ -5919,11 +7917,28 @@ function initTooltips() {
     positionTooltip(anchor);
   };
 
-  document.querySelectorAll('.has-tooltip').forEach((el) => {
-    el.addEventListener('mouseenter', () => showTooltip(el));
-    el.addEventListener('mouseleave', hideTooltip);
-    el.addEventListener('focus', () => showTooltip(el));
-    el.addEventListener('blur', hideTooltip);
+  document.addEventListener('mouseover', (e) => {
+    const anchor = e.target.closest('[data-tooltip]');
+    if (anchor) showTooltip(anchor);
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    if (!activeAnchor) return;
+    const anchor = e.target.closest('[data-tooltip]');
+    if (!anchor || anchor !== activeAnchor) return;
+    const next = e.relatedTarget;
+    if (next && anchor.contains(next)) return;
+    hideTooltip();
+  });
+
+  document.addEventListener('focusin', (e) => {
+    const anchor = e.target.closest('[data-tooltip]');
+    if (anchor) showTooltip(anchor);
+  });
+
+  document.addEventListener('focusout', (e) => {
+    const anchor = e.target.closest('[data-tooltip]');
+    if (anchor && activeAnchor === anchor) hideTooltip();
   });
 
   window.addEventListener('scroll', () => {
@@ -5935,6 +7950,92 @@ function initTooltips() {
 }
 
 /* ── Init ── */
+function chatNeedsInputTailAlreadyAppended(chat) {
+  return chat.some((message) => message.role === 'agent' && message.steps?.some(
+    (step) => step.type === 'actions' && step.buttons?.some((btn) => btn.action?.startsWith('chat:')),
+  ));
+}
+
+function appendChatNeedsInputTail(task) {
+  if (!task.generalChat) task.generalChat = [];
+  if (chatNeedsInputTailAlreadyAppended(task.generalChat)) return;
+
+  task.generalChat.push({
+    role: 'agent',
+    steps: [
+      {
+        type: 'text',
+        dot: 'gray',
+        html: `<p>I have a follow-up on <strong>${escapeHtml(task.title)}</strong>:</p><p>Should budget alerts default to email, in-app, or both channels?</p>`,
+      },
+      {
+        type: 'actions',
+        dot: 'gray',
+        buttons: [
+          { label: 'Email only', action: 'chat:email', primary: true },
+          { label: 'In-app only', action: 'chat:in-app', primary: false },
+          { label: 'Both', action: 'chat:both', primary: false },
+        ],
+      },
+    ],
+  });
+}
+
+function applyModeAttention(task, mode, reviewReason) {
+  if (mode === 'chat') {
+    task.chatReviewReason = reviewReason;
+    task.chatReviewSince = Date.now();
+    if (reviewReason === 'needs-input') appendChatNeedsInputTail(task);
+  } else if (mode === 'design') {
+    task.status = 'review';
+    task.reviewReason = reviewReason;
+    task.reviewSince = Date.now();
+    task.commits = Math.max(task.commits || 0, 1);
+  } else if (mode === 'code') {
+    task.status = 'review';
+    task.reviewReason = reviewReason;
+    task.commits = Math.max(task.commits || 0, 1);
+    task.prs = Math.max(task.prs || 0, 1);
+    task.workSimulated = true;
+    syncReviewReason(task);
+  }
+
+  renderBoard();
+  renderTaskSidebar();
+  renderBoardWorkspaceStats();
+  renderAppModeTabBadges();
+  if (subheaderView === 'overview') renderProjectOverview();
+
+  if (activeTaskId === task.id) {
+    if (activeAppMode === mode) refreshActiveModeChat();
+    if (mode === 'code' && activeAppMode === 'code') {
+      const badge = $('#task-status-badge');
+      if (badge) {
+        badge.textContent = STATUS_LABELS.review;
+        badge.className = 'status-badge review';
+      }
+    }
+  }
+}
+
+function initModeAttentionSimulation() {
+  const sims = [
+    { taskId: 't1', mode: 'chat', reviewReason: 'needs-input', delay: 8000 },
+    { taskId: 't9', mode: 'code', reviewReason: 'ready', delay: 11000 },
+    { taskId: 't1', mode: 'design', reviewReason: 'ready', delay: 14000 },
+  ];
+
+  sims.forEach(({ taskId, mode, reviewReason, delay }) => {
+    setTimeout(() => {
+      const task = getTask(taskId);
+      if (!task || taskNeedsModeAttention(task, mode)) return;
+      if (mode !== 'chat' && task.status !== 'in-progress') return;
+      if (mode === 'chat' && task.chatReviewReason) return;
+      applyModeAttention(task, mode, reviewReason);
+    }, delay);
+  });
+}
+
 function hydrateNeedsInputReviewTasks() {
   tasks.forEach((task) => {
     if (task.status === 'review' && task.reviewReason === 'needs-input' && !task.workSteps) {
@@ -5947,35 +8048,55 @@ function init() {
   initTheme();
   initIcons();
   hydrateNeedsInputReviewTasks();
+  hydrateReviewWaitingTimes();
   initInProgressSimulation();
   initInProgressStatsTick();
   initTaskChat();
   initDesignChat();
   initRichSelects();
-  initTaskSetup();
   initModal();
+  initDirectoryModal();
+  renderAppModeTabBadges();
   initWorkTabs();
   initBrowserPreview();
   initDiffCommitMenu();
   initSnackbar();
+  initModeAttentionSimulation();
   initWorkspaceStatsMenus();
   initTooltips();
   initWorkspaceChartTooltips();
   initAppMode();
+  initProjectEmptyState();
+  initProjectEmptyRuntimeMenu();
+  initNewProjectButton();
+  initSubheaderNav();
   initEvents();
   renderBoardSubheader();
 
   if (activeAppMode === 'code') {
     const defaultTaskId = getDefaultTaskId();
     if (defaultTaskId) openTaskDetail(defaultTaskId);
-    else renderBoard();
+    else {
+      renderBoard();
+      updateProjectEmptyState();
+    }
   } else if (activeAppMode === 'design') {
-    renderDesignChat();
-    renderDesignArtifact(null);
     renderTaskSidebar();
+    const firstId = getFirstTaskIdForProject();
+    if (firstId) openTaskDetail(firstId);
+    else {
+      renderDesignChat();
+      renderDesignArtifact(null);
+      updateProjectEmptyState();
+    }
   } else {
-    renderGeneralChat();
     renderTaskSidebar();
+    const firstId = getFirstTaskIdForProject();
+    if (firstId) openTaskDetail(firstId);
+    else {
+      renderGeneralChat();
+      updateProjectEmptyState();
+    }
   }
 }
 

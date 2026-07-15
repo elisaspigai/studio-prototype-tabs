@@ -71,9 +71,18 @@
         </div>
         <div class="topbar-center">
           <div class="app-mode-switch" role="tablist" aria-label="App mode">
-            <button type="button" class="app-mode-tab active" data-app-mode="chat" role="tab" aria-selected="true">Chat</button>
-            <button type="button" class="app-mode-tab" data-app-mode="design" role="tab" aria-selected="false">Design</button>
-            <button type="button" class="app-mode-tab" data-app-mode="code" role="tab" aria-selected="false">Code</button>
+            <button type="button" class="app-mode-tab active" data-app-mode="chat" role="tab" aria-selected="true">
+              Chat
+              <span class="app-mode-tab-badge" hidden aria-hidden="true"></span>
+            </button>
+            <button type="button" class="app-mode-tab" data-app-mode="design" role="tab" aria-selected="false">
+              Design
+              <span class="app-mode-tab-badge" hidden aria-hidden="true"></span>
+            </button>
+            <button type="button" class="app-mode-tab" data-app-mode="code" role="tab" aria-selected="false">
+              Code
+              <span class="app-mode-tab-badge" hidden aria-hidden="true"></span>
+            </button>
           </div>
         </div>
         <div class="topbar-actions">
@@ -89,20 +98,26 @@
 
       <div class="subheader">
         <div class="repo-tabs">
+          <button type="button" class="repo-tab repo-tab-overview" id="subheader-overview-btn" data-repo="overview">Overview</button>
+          <span class="repo-tabs-divider" aria-hidden="true"></span>
           <button class="repo-tab active" data-repo="all">All projects</button>
           <button class="repo-tab" data-repo="kimchi">Kimchi</button>
           <button class="repo-tab" data-repo="one-click">One-click</button>
           <button class="repo-tab" data-repo="hackathon">Hackathon</button>
-          <button class="repo-tab add-repo" type="button">
+          <button class="repo-tab add-repo" type="button" id="new-project-btn">
             <span class="icon-slot" data-icon="plus" data-size="12" data-icon-class="lucide-icon"></span>
             New project
           </button>
         </div>
-        <div class="subheader-right code-mode-only">
-          <span class="workspace-pill workspace-pill-files" id="board-workspace-files"></span>
-          <button type="button" class="workspace-pill workspace-pill-pr workspace-pill-btn" id="board-workspace-prs" aria-haspopup="menu" aria-expanded="false"></button>
-          <button type="button" class="workspace-pill workspace-pill-commits workspace-pill-btn" id="board-workspace-commits" aria-haspopup="menu" aria-expanded="false"></button>
-          <button class="workspace-tool-btn" type="button" aria-label="Settings">
+        <div class="subheader-right">
+          <span class="subheader-project-label">Project</span>
+          <button type="button" class="subheader-meta-btn" id="subheader-skills-btn">X skills</button>
+          <button type="button" class="subheader-meta-btn" id="subheader-connectors-btn">X connectors</button>
+          <span class="subheader-right-divider code-mode-only" aria-hidden="true"></span>
+          <span class="workspace-pill workspace-pill-files code-mode-only" id="board-workspace-files"></span>
+          <button type="button" class="workspace-pill workspace-pill-pr workspace-pill-btn code-mode-only" id="board-workspace-prs" aria-haspopup="menu" aria-expanded="false"></button>
+          <button type="button" class="workspace-pill workspace-pill-commits workspace-pill-btn code-mode-only" id="board-workspace-commits" aria-haspopup="menu" aria-expanded="false"></button>
+          <button class="workspace-tool-btn code-mode-only" type="button" aria-label="Settings">
             <span class="icon-slot" data-icon="settings" data-size="14"></span>
           </button>
         </div>
@@ -112,7 +127,7 @@
         <aside class="task-sidebar" id="task-sidebar"></aside>
 
         <div class="task-main">
-          <div class="task-subheader code-mode-only">
+          <div class="task-subheader">
             <h1 class="task-title-header" id="task-detail-title">Implement authentication properly</h1>
             <div class="task-subheader-right">
               <span class="status-badge in-progress" id="task-status-badge">In progress</span>
@@ -123,12 +138,108 @@
             </div>
           </div>
 
+          <div class="project-empty-state" id="project-empty-state" hidden>
+            <div class="project-empty-inner">
+              <div class="project-empty-header">
+                <h2 class="project-empty-title" id="project-empty-title">New task</h2>
+                <div class="project-empty-header-end" id="project-empty-header-end">
+                  <div class="project-empty-context">
+                    <button type="button" class="project-empty-chip">
+                      <span id="project-empty-project-label">studio-prototype</span>
+                      <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+                    </button>
+                    <button type="button" class="project-empty-chip" id="project-empty-branch-chip">
+                      <span>fixes</span>
+                      <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+                    </button>
+                    <div class="project-empty-chip-wrap" id="project-empty-runtime-wrap">
+                      <button type="button" class="project-empty-chip project-empty-chip-trigger" id="project-empty-runtime-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="icon-slot project-empty-runtime-icon" id="project-empty-runtime-icon" data-icon="laptop" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+                        <span id="project-empty-runtime-label">Local</span>
+                        <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+                      </button>
+                      <div class="project-empty-chip-menu" id="project-empty-runtime-menu" hidden role="listbox" aria-label="Runtime">
+                        <button type="button" class="project-empty-chip-option selected" role="option" data-value="this-mac" aria-selected="true">
+                          <span class="icon-slot" data-icon="laptop" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                          <span class="project-empty-chip-option-label">This Mac</span>
+                          <span class="icon-slot project-empty-chip-check" data-icon="check" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                        </button>
+                        <button type="button" class="project-empty-chip-option" role="option" data-value="new-worktree" aria-selected="false">
+                          <span class="icon-slot" data-icon="git-branch" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                          <span class="project-empty-chip-option-label">New Worktree</span>
+                          <span class="icon-slot project-empty-chip-check" data-icon="check" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="project-empty-compose">
+                <div class="project-empty-input-box">
+                  <textarea id="project-empty-input" rows="3" placeholder="Plan, Build, / for skills, @ for context" autocomplete="off"></textarea>
+                  <div class="project-empty-input-footer">
+                    <div class="project-empty-input-tools">
+                      <button type="button" class="project-empty-tool-btn" aria-label="Attach">
+                        <span class="icon-slot" data-icon="plus" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                      </button>
+                      <div class="project-empty-select-wrap rich-select-wrap" id="project-empty-permissions-select" data-default="yolo" data-menu-placement="up">
+                        <button type="button" class="project-empty-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                          <span class="rich-select-value">YOLO</span>
+                          <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
+                        </button>
+                        <div class="rich-select-menu" hidden role="listbox" aria-label="Permissions"></div>
+                        <input type="hidden" name="permissions" value="yolo" />
+                      </div>
+                      <div class="project-empty-select-wrap rich-select-wrap" id="project-empty-delivery-select" data-default="manual" data-menu-placement="up">
+                        <button type="button" class="project-empty-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                          <span class="rich-select-value">Manual PR</span>
+                          <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
+                        </button>
+                        <div class="rich-select-menu" hidden role="listbox" aria-label="Delivery"></div>
+                        <input type="hidden" name="delivery" value="manual" />
+                      </div>
+                      <div class="project-empty-select-wrap rich-select-wrap" id="project-empty-model-select" data-default="multi" data-menu-placement="up">
+                        <button type="button" class="project-empty-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                          <span class="rich-select-value">Multi-model</span>
+                          <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
+                        </button>
+                        <div class="rich-select-menu" hidden role="listbox" aria-label="Model"></div>
+                        <input type="hidden" name="model" value="multi" />
+                      </div>
+                    </div>
+                    <button type="button" class="project-empty-start-btn" id="project-empty-start-btn" aria-label="Start task" hidden>
+                      <span class="icon-slot" data-icon="arrow-up" data-size="16" data-icon-class="lucide-icon"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-overview" id="project-overview" hidden>
+            <div class="project-overview-inner" id="project-overview-content"></div>
+          </div>
+
           <div class="task-main-panels">
         <div class="chat-layout" id="chat-layout">
           <section class="agent-panel general-chat-panel">
             <div class="chat-messages" id="general-chat-messages"></div>
             <div class="chat-input-area">
               <div class="chat-compose">
+                <div class="chat-compose-header">
+                  <span class="chat-compose-title" id="general-chat-compose-title">New chat</span>
+                  <div class="chat-compose-header-end">
+                    <div class="compose-select-wrap rich-select-wrap" id="general-chat-model-select" data-default="multi" data-menu-placement="up">
+                      <button type="button" class="compose-pill rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="rich-select-value">Multi-model</span>
+                        <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
+                      </button>
+                      <div class="rich-select-menu" hidden role="listbox" aria-label="Model"></div>
+                      <input type="hidden" name="model" value="multi" />
+                    </div>
+                  </div>
+                </div>
                 <div class="chat-input-wrap">
                   <textarea id="general-chat-input" rows="1" placeholder="Ask anything…" autocomplete="off"></textarea>
                   <button class="send-btn" type="button" data-send="general" aria-label="Send">
@@ -145,6 +256,19 @@
             <div class="chat-messages" id="design-chat-messages"></div>
             <div class="chat-input-area">
               <div class="chat-compose">
+                <div class="chat-compose-header">
+                  <span class="chat-compose-title" id="design-chat-compose-title">New artifact</span>
+                  <div class="chat-compose-header-end">
+                    <div class="compose-select-wrap rich-select-wrap" id="design-chat-model-select" data-default="multi" data-menu-placement="up">
+                      <button type="button" class="compose-pill rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="rich-select-value">Multi-model</span>
+                        <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
+                      </button>
+                      <div class="rich-select-menu" hidden role="listbox" aria-label="Model"></div>
+                      <input type="hidden" name="model" value="multi" />
+                    </div>
+                  </div>
+                </div>
                 <div class="chat-input-wrap">
                   <textarea id="design-chat-input" rows="1" placeholder="Describe a screen to prototype…" autocomplete="off"></textarea>
                   <button class="send-btn" type="button" data-send="design" aria-label="Send">
@@ -181,62 +305,6 @@
             <h2 id="task-agent-panel-title">Task agent</h2>
           </div>
 
-          <div id="task-setup-panel" class="task-setup-panel" hidden>
-            <form id="task-setup-form" class="task-setup-form">
-              <div class="task-desc-wrap">
-                <textarea id="task-setup-description" rows="6" placeholder="Describe the task…"></textarea>
-              </div>
-              <p class="modal-hint">Use <kbd>@file</kbd> to reference files. Drag and drop or <kbd>⌘V</kbd> to add images.</p>
-
-              <div class="modal-field">
-                <span class="modal-field-label">Permissions</span>
-                <div class="modal-select-wrap rich-select-wrap" id="task-setup-permissions-select" data-default="yolo" data-menu-placement="down">
-                  <button type="button" class="modal-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="rich-select-value">YOLO</span>
-                    <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
-                  </button>
-                  <div class="rich-select-menu" hidden role="listbox" aria-label="Permissions"></div>
-                  <input type="hidden" name="permissions" value="yolo" />
-                </div>
-              </div>
-
-              <div class="modal-field">
-                <span class="modal-field-label">Model</span>
-                <div class="modal-select-wrap rich-select-wrap" id="task-setup-model-select" data-default="multi" data-menu-placement="down">
-                  <button type="button" class="modal-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="rich-select-value">Multi-model</span>
-                    <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
-                  </button>
-                  <div class="rich-select-menu" hidden role="listbox" aria-label="Model"></div>
-                  <input type="hidden" name="model" value="multi" />
-                </div>
-              </div>
-
-              <div class="modal-field">
-                <span class="modal-field-label">Worktree base ref</span>
-                <button type="button" class="modal-select" id="task-setup-worktree-ref">
-                  <span class="icon-slot" data-icon="git-branch" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
-                  <span>main (current)</span>
-                  <span class="icon-slot chevron-down" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
-                </button>
-              </div>
-
-              <div class="modal-inline-row">
-                <label class="modal-checkbox">
-                  <input type="checkbox" name="autoCommit" checked />
-                  <span class="checkbox-box"></span>
-                  <span>Automatically</span>
-                </label>
-                <button type="button" class="modal-select compact">
-                  <span>Make commit</span>
-                  <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
-                </button>
-              </div>
-
-              <button type="submit" class="btn-modal-start task-setup-start">Start task</button>
-            </form>
-          </div>
-
           <div id="task-agent-active">
           <div class="chat-messages" id="task-chat-messages"></div>
           <div class="agent-thinking-bar" id="task-thinking-bar" hidden>
@@ -264,6 +332,14 @@
                   <div class="rich-select-menu" hidden role="listbox" aria-label="Permissions"></div>
                   <input type="hidden" name="permissions" value="ask-edits" />
                 </div>
+                <div class="compose-select-wrap rich-select-wrap" id="task-delivery-select" data-default="manual" data-menu-placement="up">
+                  <button type="button" class="compose-pill rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="rich-select-value">Manual PR</span>
+                    <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
+                  </button>
+                  <div class="rich-select-menu" hidden role="listbox" aria-label="Delivery"></div>
+                  <input type="hidden" name="delivery" value="manual" />
+                </div>
                 <div class="compose-select-wrap rich-select-wrap" id="task-model-select" data-default="multi" data-menu-placement="up">
                   <button type="button" class="compose-pill rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
                     <span class="rich-select-value">Multi-model</span>
@@ -280,13 +356,6 @@
 
         <!-- Work Panel -->
         <section class="work-panel">
-          <div class="work-panel-empty" id="work-panel-empty" hidden>
-            <div class="work-empty-state">
-              <span class="icon-slot work-empty-icon" data-icon="file-diff" data-size="28" data-icon-class="lucide-icon lucide-muted"></span>
-              <p class="work-empty-title">No changes yet</p>
-              <p class="work-empty-hint">Start the task to see file changes and agent output</p>
-            </div>
-          </div>
           <div class="work-panel-active" id="work-panel-active">
           <div class="work-tabs">
             <button class="work-tab active" data-tab="changes">
@@ -437,6 +506,46 @@
   </dialog>
 
   <div id="workspace-stats-menu" class="workspace-stats-menu" hidden role="menu"></div>
+
+  <dialog id="directory-modal" class="modal directory-modal">
+    <div class="directory-modal-content">
+      <div class="directory-modal-header">
+        <h3 id="directory-modal-title">Directory</h3>
+        <button type="button" class="modal-close" id="directory-modal-close" aria-label="Close">
+          <span class="icon-slot" data-icon="x" data-size="16"></span>
+        </button>
+      </div>
+      <div class="directory-modal-body">
+        <nav class="directory-nav" aria-label="Directory sections">
+          <button type="button" class="directory-nav-item active" data-directory-section="skills">
+            <span class="icon-slot" data-icon="square-terminal" data-size="16" data-icon-class="lucide-icon"></span>
+            Skills
+          </button>
+          <button type="button" class="directory-nav-item" data-directory-section="connectors">
+            <span class="icon-slot" data-icon="layout-grid" data-size="16" data-icon-class="lucide-icon"></span>
+            Connectors
+          </button>
+        </nav>
+        <div class="directory-main">
+          <div class="directory-toolbar">
+            <label class="directory-search-wrap">
+              <span class="icon-slot" data-icon="folder" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+              <input type="search" id="directory-search" placeholder="Search skills…" autocomplete="off" />
+            </label>
+            <div class="directory-toolbar-row">
+              <div class="directory-source-tabs" id="directory-source-tabs"></div>
+              <div class="directory-filter-actions">
+                <button type="button" class="directory-filter-btn">Filter by <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span></button>
+                <button type="button" class="directory-filter-btn">Sort by <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span></button>
+              </div>
+            </div>
+          </div>
+          <div class="directory-section-label" id="directory-section-label">Available skills</div>
+          <div class="directory-grid" id="directory-grid"></div>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <script type="module" src="app.js"></script>
 </body>

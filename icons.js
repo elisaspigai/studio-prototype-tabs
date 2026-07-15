@@ -36,6 +36,8 @@ import {
   Moon,
   EllipsisVertical,
   Archive,
+  Mic,
+  Laptop,
 } from 'lucide';
 
 const ICONS = {
@@ -75,6 +77,8 @@ const ICONS = {
   moon: Moon,
   'ellipsis-vertical': EllipsisVertical,
   archive: Archive,
+  mic: Mic,
+  laptop: Laptop,
 };
 
 const defaults = { 'stroke-width': 2 };
