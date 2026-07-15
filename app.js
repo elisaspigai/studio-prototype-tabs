@@ -1,13 +1,6 @@
 import { iconHtml, initIcons } from './icons.js';
 
 /* ── Agents ── */
-const AGENTS = [
-  { id: 'dp', name: 'David Park', initials: 'DP', color: '#f472b6' },
-  { id: 'zu', name: 'Zilvinas Urbonas', initials: 'ZU', color: '#2dd4bf' },
-  { id: 'bm', name: 'Bob Martinez', initials: 'BM', color: '#9f3d5a' },
-  { id: 'cc', name: 'Carol Chen', initials: 'CC', color: '#c4a035' },
-];
-
 const STATUS_LABELS = {
   backlog: 'Backlog',
   'in-progress': 'In progress',
@@ -45,6 +38,21 @@ const REVIEW_REASONS = {
   },
 };
 
+const SIDEBAR_SECTIONS = {
+  design: [
+    { id: 'in-progress', label: 'In progress', dot: 'in-progress' },
+    { id: 'needs-input', label: 'Needs input', dot: 'needs-input' },
+    { id: 'done', label: 'Done', dot: 'done' },
+    { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
+  ],
+  code: [
+    { id: 'needs-input', label: 'Needs input', dot: 'needs-input' },
+    { id: 'done', label: 'Done', dot: 'done' },
+    { id: 'merged', label: 'Merged', dot: 'merged' },
+    { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
+  ],
+};
+
 
 /* ── State ── */
 let tasks = [
@@ -53,7 +61,6 @@ let tasks = [
     title: 'Prototype budgets overview screen',
     repo: 'design',
     status: 'in-progress',
-    agentId: 'dp',
     prs: 0,
     commits: 0,
     files: 0,
@@ -67,7 +74,6 @@ let tasks = [
     repo: 'backend',
     status: 'review',
     reviewReason: 'needs-input',
-    agentId: 'cc',
     prs: 1,
     commits: 1,
     files: 4,
@@ -81,7 +87,6 @@ let tasks = [
     title: 'Build budgets dashboard from prototypes',
     repo: 'frontend',
     status: 'in-progress',
-    agentId: 'zu',
     prs: 0,
     commits: 0,
     files: 0,
@@ -95,7 +100,6 @@ let tasks = [
     repo: 'frontend',
     status: 'review',
     reviewReason: 'needs-input',
-    agentId: 'bm',
     prs: 1,
     commits: 2,
     files: 4,
@@ -109,7 +113,6 @@ let tasks = [
     repo: 'backend',
     status: 'review',
     reviewReason: 'ready',
-    agentId: 'bm',
     prs: 1,
     commits: 1,
     files: 2,
@@ -121,12 +124,12 @@ let tasks = [
     id: 't6',
     title: 'Prototype budget editing & alert flows',
     repo: 'design',
-    status: 'backlog',
-    agentId: 'dp',
+    status: 'review',
+    reviewReason: 'needs-input',
     prs: 0,
-    commits: 0,
-    files: 0,
-    additions: 0,
+    commits: 1,
+    files: 2,
+    additions: 24,
     deletions: 0,
     chat: [],
   },
@@ -135,7 +138,6 @@ let tasks = [
     title: 'Wire budget cards to API contracts',
     repo: 'frontend',
     status: 'backlog',
-    agentId: 'zu',
     prs: 0,
     commits: 0,
     files: 0,
@@ -148,7 +150,6 @@ let tasks = [
     title: 'Add budget threshold alert endpoints',
     repo: 'backend',
     status: 'backlog',
-    agentId: 'cc',
     prs: 0,
     commits: 0,
     files: 0,
@@ -161,7 +162,6 @@ let tasks = [
     title: 'Fix incorrect settings icon in sidebar',
     repo: 'frontend',
     status: 'backlog',
-    agentId: 'zu',
     prs: 0,
     commits: 0,
     files: 0,
@@ -174,7 +174,6 @@ let tasks = [
     title: 'Fix dashboard spend totals discrepancy',
     repo: 'backend',
     status: 'backlog',
-    agentId: 'cc',
     prs: 0,
     commits: 0,
     files: 0,
@@ -187,7 +186,6 @@ let tasks = [
     title: 'Budgets empty states & onboarding',
     repo: 'design',
     status: 'closed',
-    agentId: 'dp',
     prs: 1,
     commits: 1,
     files: 3,
@@ -200,7 +198,6 @@ let tasks = [
     title: 'Budget categories schema migration',
     repo: 'backend',
     status: 'closed',
-    agentId: 'cc',
     prs: 1,
     commits: 2,
     files: 4,
@@ -213,7 +210,6 @@ let tasks = [
     title: 'Budget row loading skeletons',
     repo: 'frontend',
     status: 'closed',
-    agentId: 'zu',
     prs: 1,
     commits: 1,
     files: 2,
@@ -226,7 +222,6 @@ let tasks = [
     title: 'Fix agent picker icon mismatch',
     repo: 'frontend',
     status: 'closed',
-    agentId: 'zu',
     prs: 1,
     commits: 1,
     files: 1,
@@ -253,10 +248,19 @@ const TASK_DESCRIPTIONS = {
   t14: 'Fix agent picker icon mismatch\n\nAgent picker dropdown shows the wrong icon for assigned users in one theme variant. Align with the avatar chip icon set used on kanban cards.',
 };
 
+const TASK_PROJECTS = {
+  t6: 'hackathon',
+  t9: 'one-click',
+  t10: 'one-click',
+  t11: 'hackathon',
+  t14: 'one-click',
+};
+
 tasks.forEach((task) => {
   if (!task.description) {
     task.description = TASK_DESCRIPTIONS[task.id] || task.title;
   }
+  task.project = TASK_PROJECTS[task.id] || 'kimchi';
 });
 
 const TASK_BLOCKED_BY = {
@@ -275,9 +279,10 @@ tasks.forEach((task) => {
 
 let activeTaskId = null;
 let activeRepo = 'all';
-let activeAssignee = null;
 let activeWorkspaceId = 'kimchi';
 let activeWorkspaceChartTab = 'tasks';
+let activeAppMode = 'chat';
+let designArtifactHtml = null;
 
 const WORKSPACE_CHART_TABS = [
   { id: 'tasks', label: 'Tasks' },
@@ -302,6 +307,7 @@ const WORKSPACE_STATUS_COLORS_BY_THEME = {
 };
 
 const THEME_STORAGE_KEY = 'studio-theme';
+const APP_MODE_STORAGE_KEY = 'studio-app-mode';
 
 function getTheme() {
   return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
@@ -386,7 +392,7 @@ const WORKSPACES = [
     repository: 'cast-ai/kimchi-studio',
     live: true,
     repos: 3,
-    members: 4,
+    memberCount: 4,
   },
   {
     id: 'wire',
@@ -395,7 +401,7 @@ const WORKSPACES = [
     repos: 2,
     openPrs: 14,
     avgDailyCost: workspaceAvgDailyCost(4, 2, 'wire'),
-    members: ['dp', 'zu', 'bm', 'cc'],
+    memberCount: 4,
     history: workspaceHistorySeed('wire', { memberCount: 4, repos: 2 }),
   },
   {
@@ -405,7 +411,7 @@ const WORKSPACES = [
     repos: 4,
     openPrs: 9,
     avgDailyCost: workspaceAvgDailyCost(3, 4, 'kube'),
-    members: ['zu', 'bm', 'cc'],
+    memberCount: 3,
     history: workspaceHistorySeed('kube', { memberCount: 3, repos: 4 }),
   },
   {
@@ -415,7 +421,7 @@ const WORKSPACES = [
     repos: 1,
     openPrs: 5,
     avgDailyCost: workspaceAvgDailyCost(2, 1, 'dbo'),
-    members: ['cc', 'bm'],
+    memberCount: 2,
     history: workspaceHistorySeed('dbo', { memberCount: 2, repos: 1 }),
   },
   {
@@ -425,13 +431,10 @@ const WORKSPACES = [
     repos: 2,
     openPrs: 4,
     avgDailyCost: workspaceAvgDailyCost(2, 2, 'woop'),
-    members: ['dp', 'zu'],
+    memberCount: 2,
     history: workspaceHistorySeed('woop', { memberCount: 2, repos: 2 }),
   },
 ];
-let taskSidebarRepo = 'all';
-let assigneeMenuTaskId = null;
-let assigneeMenuAnchor = null;
 let nextId = 15;
 let dragState = null;
 let linkRafPending = false;
@@ -1024,13 +1027,11 @@ function deriveOlderCommitFiles(files, commitIndex) {
 }
 
 function getDiffCommits(bundle, task) {
-  const authorName = task?.agentId ? getAgent(task.agentId).name.split(' ')[0] : 'Kimchi';
-
   return bundle.gitLog.map((entry, index) => ({
     hash: entry.hash,
     message: entry.message,
     time: entry.time,
-    author: entry.author || authorName,
+    author: entry.author || 'Kimchi',
     isHead: index === 0,
     files: entry.files || (index === 0
       ? bundle.files
@@ -1386,6 +1387,340 @@ function initBrowserPreview() {
   });
 }
 
+function applyAppModeUi() {
+  const view = $('#view-task');
+  if (view) view.dataset.appMode = activeAppMode;
+
+  $$('.app-mode-tab').forEach((tab) => {
+    const active = tab.dataset.appMode === activeAppMode;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
+}
+
+function ensureActiveTaskForMode() {
+  const visible = tasksForTaskSidebar();
+  if (activeTaskId && visible.some((task) => task.id === activeTaskId)) {
+    renderTaskSidebar();
+    return;
+  }
+
+  const defaultTaskId = getDefaultTaskId();
+  if (defaultTaskId) {
+    openTaskDetail(defaultTaskId);
+    return;
+  }
+
+  activeTaskId = null;
+  renderTaskSidebar();
+  renderBoard();
+}
+
+function normalizeAppMode(mode) {
+  if (mode === 'code') return 'code';
+  if (mode === 'design') return 'design';
+  return 'chat';
+}
+
+function setAppMode(mode, { loadTask = true } = {}) {
+  activeAppMode = normalizeAppMode(mode);
+  localStorage.setItem(APP_MODE_STORAGE_KEY, activeAppMode);
+  applyAppModeUi();
+  renderBoardSubheader();
+
+  if (activeAppMode === 'code') {
+    if (loadTask) ensureActiveTaskForMode();
+    else renderTaskSidebar();
+    return;
+  }
+
+  if (activeAppMode === 'chat') {
+    renderGeneralChat();
+    renderTaskSidebar();
+    $('#general-chat-input')?.focus();
+    return;
+  }
+
+  renderDesignChat();
+  renderDesignArtifact(designArtifactHtml);
+  if (loadTask) ensureActiveTaskForMode();
+  else renderTaskSidebar();
+}
+
+function initAppMode() {
+  const stored = localStorage.getItem(APP_MODE_STORAGE_KEY);
+  activeAppMode = normalizeAppMode(stored);
+  applyAppModeUi();
+
+  $$('.app-mode-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.appMode !== activeAppMode) {
+        setAppMode(tab.dataset.appMode);
+      }
+    });
+  });
+}
+
+function renderDesignChat() {
+  const container = $('#design-chat-messages');
+  if (!container) return;
+
+  if (container.childElementCount > 0 && !container.querySelector('.design-chat-welcome')) {
+    return;
+  }
+
+  container.innerHTML = designChatWelcomeHtml();
+}
+
+function designChatWelcomeHtml() {
+  return `
+    <div class="design-chat-welcome">
+      <p class="design-chat-welcome-title">Start with an idea</p>
+      <p class="design-chat-welcome-hint">Describe a screen, flow, or component. I'll build a standalone HTML &amp; CSS prototype in the artifact preview.</p>
+    </div>`;
+}
+
+function startNewDesignChat() {
+  activeTaskId = null;
+  designArtifactHtml = null;
+
+  const generalContainer = $('#general-chat-messages');
+  if (generalContainer) generalContainer.innerHTML = generalChatWelcomeHtml();
+
+  const designContainer = $('#design-chat-messages');
+  if (designContainer) designContainer.innerHTML = designChatWelcomeHtml();
+
+  renderDesignArtifact(null);
+  setAppMode('chat', { loadTask: false });
+}
+
+function renderGeneralChat() {
+  const container = $('#general-chat-messages');
+  if (!container) return;
+
+  if (container.childElementCount > 0 && !container.querySelector('.general-chat-welcome')) {
+    return;
+  }
+
+  container.innerHTML = generalChatWelcomeHtml();
+}
+
+function generalChatWelcomeHtml() {
+  return `
+    <div class="general-chat-welcome">
+      <p class="general-chat-welcome-title">What are you working on?</p>
+      <p class="general-chat-welcome-hint">Ask questions, explore ideas, or say <strong>create a prototype of…</strong> when you want a buildable HTML &amp; CSS preview.</p>
+    </div>`;
+}
+
+function isPrototypeRequest(text) {
+  const lower = text.toLowerCase();
+  const patterns = [
+    /\b(prototype|mockup|mock-up|wireframe)\b/,
+    /\b(create|build|make|design|prototype)\s+(a\s+)?(prototype|screen|page|flow|component|ui|dashboard|mockup|layout|modal|banner|form)\b/,
+    /\b(prototype|design)\s+(for|of)\b/,
+    /\bhtml(\s*&|\s+and)?\s*css\b/,
+  ];
+  return patterns.some((pattern) => pattern.test(lower));
+}
+
+function buildGeneralChatReply(text) {
+  const lower = text.toLowerCase();
+
+  if (lower.includes('help') || lower.includes('what can you')) {
+    return '<p>I can answer questions, brainstorm flows, and review ideas. When you want something visual, ask me to <strong>create a prototype</strong> and I\'ll switch to the Design tab with a live HTML preview.</p>';
+  }
+
+  if (lower.includes('budget')) {
+    return '<p>The budgets rollout spans design prototypes, a backend API contract, and a frontend dashboard. I can walk through any part — or prototype a screen if you describe what you need.</p>';
+  }
+
+  if (lower.includes('handoff') || lower.includes('engineering')) {
+    return '<p>For handoff, keep flows scoped to one screen at a time and call out interaction states. When you\'re ready, ask for a prototype and I\'ll generate standalone HTML &amp; CSS you can iterate on in Design mode.</p>';
+  }
+
+  return `<p>Got it. Ask a follow-up, or say something like <strong>"create a prototype of …"</strong> when you want to switch to Design mode.</p>`;
+}
+
+async function handleGeneralChat(text) {
+  const container = $('#general-chat-messages');
+  if (!container) return;
+
+  container.querySelector('.general-chat-welcome')?.remove();
+  appendUserBubble(container, text);
+
+  if (isPrototypeRequest(text)) {
+    let typing = showTyping(container);
+    await sleep(650);
+    typing.remove();
+
+    appendAgentTimeline(container, [{
+      type: 'text',
+      dot: 'gray',
+      html: '<p>Switching to Design to build your prototype…</p>',
+    }]);
+
+    await sleep(350);
+    setAppMode('design', { loadTask: false });
+    await handleDesignChat(text, { skipUserBubble: true });
+    $('#design-chat-input')?.focus();
+    return;
+  }
+
+  let typing = showTyping(container);
+  await sleep(800 + Math.random() * 400);
+  typing.remove();
+
+  appendAgentTimeline(container, [{
+    type: 'text',
+    dot: 'gray',
+    html: buildGeneralChatReply(text),
+  }]);
+}
+
+function renderDesignArtifact(html) {
+  const frame = $('#design-artifact-frame');
+  const empty = $('#design-artifact-empty');
+  const meta = $('#design-artifact-meta');
+  if (!frame) return;
+
+  if (!html) {
+    frame.hidden = true;
+    frame.removeAttribute('srcdoc');
+    if (empty) empty.hidden = false;
+    if (meta) meta.textContent = 'HTML · CSS';
+    initIcons(empty);
+    return;
+  }
+
+  frame.hidden = false;
+  if (empty) empty.hidden = true;
+  frame.srcdoc = html;
+  if (meta) meta.textContent = 'Standalone HTML · CSS';
+}
+
+function buildGenericPrototypeHtml(title, prompt = '') {
+  const safeTitle = escapeHtml(title);
+  const hint = escapeHtml(prompt.split('\n').slice(1).join(' ').trim() || 'Interactive prototype shell ready for iteration.');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${safeTitle}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fafafa;
+      color: #171717;
+      padding: 24px;
+    }
+    .proto-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #7c3aed;
+      background: #ede9fe;
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .frame {
+      border: 2px dashed #c4b5fd;
+      border-radius: 16px;
+      padding: 20px;
+      background: #fff;
+      max-width: 720px;
+    }
+    h1 { font-size: 20px; margin-bottom: 8px; }
+    p { color: #525252; line-height: 1.5; margin-bottom: 16px; }
+    .card {
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+    .card strong { display: block; margin-bottom: 4px; }
+    button {
+      border: none;
+      background: #171717;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <span class="proto-badge">Prototype</span>
+  <div class="frame">
+    <h1>${safeTitle}</h1>
+    <p>${hint}</p>
+    <div class="card"><strong>Primary action</strong>Placeholder control area</div>
+    <div class="card"><strong>Secondary block</strong>Layout section for content</div>
+    <button type="button">Continue</button>
+  </div>
+</body>
+</html>`;
+}
+
+async function loadBudgetPrototypeHtml() {
+  try {
+    const response = await fetch('/previews/budgets-proto.html');
+    if (!response.ok) throw new Error('missing preview');
+    return response.text();
+  } catch {
+    return buildGenericPrototypeHtml('Budgets overview', 'Budget summary strip, category list, and alert indicators.');
+  }
+}
+
+async function buildDesignPrototypeHtml(prompt) {
+  const lower = prompt.toLowerCase();
+  const title = prompt.split('\n')[0].trim() || 'Prototype';
+
+  if (lower.includes('budget')) {
+    return loadBudgetPrototypeHtml();
+  }
+
+  if (lower.includes('dashboard')) {
+    return buildGenericPrototypeHtml(title, 'Dashboard layout with summary metrics and detail panels.');
+  }
+
+  return buildGenericPrototypeHtml(title, prompt);
+}
+
+async function handleDesignChat(text, { skipUserBubble = false } = {}) {
+  const container = $('#design-chat-messages');
+  if (!container) return;
+
+  container.querySelector('.design-chat-welcome')?.remove();
+  if (!skipUserBubble) appendUserBubble(container, text);
+
+  let typing = showTyping(container);
+  await sleep(900 + Math.random() * 500);
+  typing.remove();
+
+  const html = await buildDesignPrototypeHtml(text);
+  designArtifactHtml = html;
+  renderDesignArtifact(html);
+
+  appendAgentTimeline(container, [{
+    type: 'text',
+    dot: 'gray',
+    html: `<p>Built a standalone HTML &amp; CSS prototype for <strong>${escapeHtml(text.split('\n')[0].trim())}</strong>. Preview it in the artifact panel.</p>`,
+  }]);
+}
+
+function initDesignChat() {
+  initChatInput('general-chat-input', handleGeneralChat);
+  initChatInput('design-chat-input', handleDesignChat);
+}
+
 function initDiffCommitMenu() {
   const wrap = $('#diff-commit-select-wrap');
   if (!wrap || wrap.dataset.bound) return;
@@ -1435,10 +1770,6 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 /* ── Helpers ── */
-function getAgent(id) {
-  return AGENTS.find((a) => a.id === id) || AGENTS[0];
-}
-
 function getTask(id) {
   return tasks.find((t) => t.id === id);
 }
@@ -1448,25 +1779,52 @@ function boardTasks() {
   return tasks;
 }
 
-function tasksForBoardRepo() {
-  let list = boardTasks();
+function tasksForProject(list) {
   if (activeRepo === 'all') return list;
-  return list.filter((t) => t.repo === activeRepo);
+  return list.filter((task) => task.project === activeRepo);
+}
+
+function tasksForBoardRepo() {
+  return tasksForProject(boardTasks());
 }
 
 function tasksForBoard() {
-  let list = tasksForBoardRepo();
-  if (activeAssignee) list = list.filter((t) => t.agentId === activeAssignee);
-  return list;
+  return tasksForBoardRepo();
 }
 
 function tasksForTaskSidebar() {
-  if (taskSidebarRepo === 'all') return tasks;
-  return tasks.filter((t) => t.repo === taskSidebarRepo);
+  let list = tasksForProject(tasks);
+  if (activeAppMode === 'code') {
+    return list.filter((task) => task.repo !== 'design');
+  }
+  return list.filter((task) => task.repo === 'design');
+}
+
+function getSidebarBucket(task, mode = activeAppMode) {
+  if (task.archived) return 'archive';
+
+  if (mode === 'code') {
+    if (task.status === 'backlog' || task.status === 'in-progress') return 'active';
+    if (task.status === 'review' && task.reviewReason === 'needs-input') return 'needs-input';
+    if (task.status === 'review' && task.reviewReason === 'ready') return 'done';
+    if (task.status === 'closed') return 'merged';
+    return 'active';
+  }
+
+  if (task.status === 'backlog' || task.status === 'in-progress') return 'in-progress';
+  if (task.status === 'review' && task.reviewReason === 'needs-input') return 'needs-input';
+  if (task.status === 'review' && task.reviewReason === 'ready') return 'done';
+  if (task.status === 'closed') return 'done';
+  return 'in-progress';
 }
 
 function defaultRepoForNewTask() {
-  return activeRepo === 'all' ? 'backend' : activeRepo;
+  if (activeAppMode !== 'code') return 'design';
+  return 'backend';
+}
+
+function defaultProjectForNewTask() {
+  return activeRepo === 'all' ? 'kimchi' : activeRepo;
 }
 
 function syncReviewReason(task) {
@@ -1623,20 +1981,25 @@ function startAllColumnTasks(status) {
   renderBoard();
 }
 
-function archiveClosedTasks() {
-  const closedIds = new Set(
-    tasksForBoard()
-      .filter((task) => task.status === 'closed')
-      .map((task) => task.id),
-  );
-  if (closedIds.size === 0) return;
+function archiveCompletedTasks() {
+  const archiveBucket = activeAppMode === 'code' ? 'merged' : 'done';
+  const toArchive = tasksForTaskSidebar().filter((task) => {
+    if (task.archived) return false;
+    return getSidebarBucket(task) === archiveBucket;
+  });
+  if (toArchive.length === 0) return;
 
-  if (activeTaskId && closedIds.has(activeTaskId)) {
-    activeTaskId = null;
-    showView('board');
+  const archivedIds = new Set(toArchive.map((task) => task.id));
+  toArchive.forEach((task) => {
+    task.archived = true;
+  });
+
+  if (activeTaskId && archivedIds.has(activeTaskId)) {
+    const nextTask = tasksForTaskSidebar().find((task) => !archivedIds.has(task.id));
+    if (nextTask) openTaskDetail(nextTask.id);
+    else activeTaskId = null;
   }
 
-  tasks = tasks.filter((task) => !closedIds.has(task.id));
   renderBoard();
   renderTaskSidebar();
 }
@@ -1650,39 +2013,6 @@ function boardColumnSummary() {
       return count ? `${label}/ (${count} tasks)` : `${label}/`;
     })
     .join('<br>');
-}
-
-function avatarHtml(agent, size = '') {
-  return `<span class="avatar ${size}" style="--avatar-bg:${agent.color}">${agent.initials}</span>`;
-}
-
-function renderBoardAvatarStack() {
-  const stack = $('#board-avatar-stack');
-  if (!stack) return;
-
-  const agentIds = new Set();
-  tasksForBoardRepo().forEach((task) => {
-    if (task.agentId) agentIds.add(task.agentId);
-  });
-
-  const agents = AGENTS.filter((agent) => agentIds.has(agent.id));
-  stack.classList.toggle('has-filter', Boolean(activeAssignee));
-  stack.innerHTML = agents
-    .map(
-      (agent, index) => `
-        <button
-          type="button"
-          class="avatar-stack-btn${activeAssignee === agent.id ? ' active' : ''}"
-          data-agent-id="${agent.id}"
-          aria-label="Show tasks assigned to ${escapeHtml(agent.name)}"
-          aria-pressed="${activeAssignee === agent.id}"
-          title="${escapeHtml(agent.name)}"
-          style="--stack-index:${index}"
-        >
-          <span class="avatar sm" style="--avatar-bg:${agent.color}">${agent.initials}</span>
-        </button>`,
-    )
-    .join('');
 }
 
 function githubRepoName(repo) {
@@ -1815,7 +2145,6 @@ function openWorkspaceStatsMenu(anchor, type) {
     return;
   }
 
-  closeAssigneeMenu();
   closeRichSelects();
   closeWorkspaceStatsMenu();
 
@@ -1940,139 +2269,7 @@ function renderBoardWorkspaceStats() {
 
 function renderBoardSubheader() {
   closeWorkspaceStatsMenu();
-  renderBoardAvatarStack();
   renderBoardWorkspaceStats();
-}
-
-function unassignedAvatarHtml(size = '') {
-  return `<span class="avatar avatar-unassigned ${size}">${iconHtml('user', { size: 11, className: 'lucide-icon' })}</span>`;
-}
-
-function formatTaskAssigneeHtml(task, avatarSize = 'xs') {
-  if (!task.agentId) return `${unassignedAvatarHtml(avatarSize)} Unassigned`;
-  const agent = getAgent(task.agentId);
-  return `${avatarHtml(agent, avatarSize)} ${agent.name}`;
-}
-
-function assigneeTriggerHtml(task) {
-  const inner = task.agentId ? avatarHtml(getAgent(task.agentId)) : unassignedAvatarHtml();
-  return `<button type="button" class="assignee-trigger" data-task-id="${task.id}" aria-label="Assign user" aria-haspopup="listbox">
-    ${inner}
-  </button>`;
-}
-
-function closeAssigneeMenu() {
-  const menu = $('#assignee-menu');
-  if (!menu) return;
-  menu.hidden = true;
-  menu.innerHTML = '';
-  assigneeMenuTaskId = null;
-  assigneeMenuAnchor = null;
-}
-
-function positionAssigneeMenu(anchor) {
-  const menu = $('#assignee-menu');
-  const rect = anchor.getBoundingClientRect();
-  const menuWidth = menu.offsetWidth || 220;
-  const padding = 8;
-
-  let left = rect.left;
-  let top = rect.bottom + 6;
-
-  if (left + menuWidth > window.innerWidth - padding) {
-    left = window.innerWidth - menuWidth - padding;
-  }
-  if (top + menu.offsetHeight > window.innerHeight - padding) {
-    top = rect.top - menu.offsetHeight - 6;
-  }
-
-  menu.style.left = `${Math.max(padding, left)}px`;
-  menu.style.top = `${Math.max(padding, top)}px`;
-}
-
-function openAssigneeMenu(anchor, taskId) {
-  const task = getTask(taskId);
-  if (!task) return;
-
-  const menu = $('#assignee-menu');
-  const isSame = !menu.hidden && assigneeMenuTaskId === taskId;
-
-  if (isSame) {
-    closeAssigneeMenu();
-    return;
-  }
-
-  assigneeMenuTaskId = taskId;
-  assigneeMenuAnchor = anchor;
-
-  const items = [
-    `<button type="button" class="assignee-menu-item${!task.agentId ? ' selected' : ''}" role="option" aria-selected="${!task.agentId}" data-agent-id="">
-      ${unassignedAvatarHtml()}
-      <span class="assignee-menu-name">Unassigned</span>
-      <span class="assignee-menu-check">${iconHtml('check', { size: 14, className: 'lucide-icon' })}</span>
-    </button>`,
-    ...AGENTS.map((agent) => {
-      const selected = agent.id === task.agentId;
-      return `<button type="button" class="assignee-menu-item${selected ? ' selected' : ''}" role="option" aria-selected="${selected}" data-agent-id="${agent.id}">
-      ${avatarHtml(agent)}
-      <span class="assignee-menu-name">${escapeHtml(agent.name)}</span>
-      <span class="assignee-menu-check">${iconHtml('check', { size: 14, className: 'lucide-icon' })}</span>
-    </button>`;
-    }),
-  ].join('');
-
-  menu.innerHTML = `
-    <div class="assignee-menu-header">Select a user</div>
-    <div class="assignee-menu-list">${items}</div>`;
-  menu.hidden = false;
-  positionAssigneeMenu(anchor);
-}
-
-function assignTaskAgent(taskId, agentId) {
-  const task = getTask(taskId);
-  const nextAgentId = agentId || null;
-  if (!task || task.agentId === nextAgentId) {
-    closeAssigneeMenu();
-    return;
-  }
-
-  task.agentId = nextAgentId;
-  closeAssigneeMenu();
-  renderBoard();
-
-  if (activeTaskId === taskId) {
-    $('#task-agent-assignee').innerHTML = formatTaskAssigneeHtml(task);
-    renderTaskSidebar();
-  }
-}
-
-function initAssigneeMenu() {
-  const menu = $('#assignee-menu');
-
-  menu.addEventListener('click', (e) => {
-    const item = e.target.closest('.assignee-menu-item');
-    if (!item || !assigneeMenuTaskId) return;
-    e.stopPropagation();
-    assignTaskAgent(assigneeMenuTaskId, item.dataset.agentId);
-  });
-
-  document.addEventListener('click', (e) => {
-    if (menu.hidden) return;
-    if (e.target.closest('#assignee-menu') || e.target.closest('.assignee-trigger')) return;
-    closeAssigneeMenu();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAssigneeMenu();
-  });
-
-  window.addEventListener('resize', () => {
-    if (!menu.hidden && assigneeMenuAnchor) positionAssigneeMenu(assigneeMenuAnchor);
-  });
-
-  document.addEventListener('scroll', () => {
-    if (!menu.hidden) closeAssigneeMenu();
-  }, true);
 }
 
 function uid() {
@@ -2126,11 +2323,7 @@ function initTheme() {
 }
 
 function getKimchiWorkspaceStats() {
-  const agentIds = new Set();
-  tasks.forEach((task) => {
-    if (task.agentId) agentIds.add(task.agentId);
-  });
-  const memberCount = Math.max(agentIds.size, 4);
+  const memberCount = WORKSPACES.find((workspace) => workspace.id === 'kimchi')?.memberCount || 4;
   const repos = WORKSPACES.find((workspace) => workspace.id === 'kimchi')?.repos || 3;
   const openPrs = tasks
     .filter((task) => task.status === 'in-progress' || task.status === 'review')
@@ -2143,22 +2336,13 @@ function getKimchiWorkspaceStats() {
     closed: tasks.filter((t) => t.status === 'closed').length,
     commits: tasks.reduce((sum, t) => sum + (t.commits || 0), 0),
     prs: Math.max(openPrs, memberCount * 3 + 1),
-    agents: agentIds.size,
     cost: workspaceDailyCostBase(memberCount, repos) * 30,
   };
 }
 
-function getKimchiWorkspaceMembers() {
-  const agentIds = new Set();
-  tasks.forEach((task) => {
-    if (task.agentId) agentIds.add(task.agentId);
-  });
-  return AGENTS.filter((agent) => agentIds.has(agent.id));
-}
-
 function buildKimchiWorkspaceHistory() {
   const stats = getKimchiWorkspaceStats();
-  const memberCount = Math.max(getKimchiWorkspaceMembers().length, 4);
+  const memberCount = WORKSPACES.find((workspace) => workspace.id === 'kimchi')?.memberCount || 4;
   const repos = WORKSPACES.find((workspace) => workspace.id === 'kimchi')?.repos || 3;
   const history = workspaceHistorySeed('kimchi', { memberCount, repos });
 
@@ -2197,7 +2381,6 @@ function getWorkspaceCardData(workspace) {
       repos: workspace.repos,
       openPrs: stats.prs,
       avgDailyCost: stats.cost / 30,
-      members: getKimchiWorkspaceMembers(),
       history: withWeekendDip(buildKimchiWorkspaceHistory()),
       stats,
     };
@@ -2208,7 +2391,6 @@ function getWorkspaceCardData(workspace) {
     repos: workspace.repos,
     openPrs: workspace.openPrs,
     avgDailyCost: workspace.avgDailyCost,
-    members: AGENTS.filter((agent) => workspace.members.includes(agent.id)),
     history,
     stats: {
       backlog: history.tasks[6].backlog,
@@ -2217,7 +2399,6 @@ function getWorkspaceCardData(workspace) {
       closed: history.tasks[6].closed,
       commits: history.commits.reduce((sum, n) => sum + n, 0),
       prs: workspace.openPrs,
-      agents: workspace.members.length,
       cost: workspace.avgDailyCost * 30,
     },
   };
@@ -2273,17 +2454,6 @@ function formatWorkspaceCost(cost) {
   if (cost < 1) return `$${cost.toFixed(1)}`;
   if (cost < 10) return `$${cost.toFixed(2)}`;
   return `$${Math.round(cost).toLocaleString()}`;
-}
-
-function workspaceMembersHtml(members) {
-  if (!members.length) {
-    return '<span class="workspace-card-members-empty">No members</span>';
-  }
-
-  return `
-    <div class="workspace-card-members">
-      ${members.map((agent) => avatarHtml(agent, 'sm')).join('')}
-    </div>`;
 }
 
 function formatWorkspaceChartYValue(value, chartType) {
@@ -2631,9 +2801,7 @@ function deleteWorkspace(workspaceId) {
     const fallback = WORKSPACES.find((item) => item.live) || WORKSPACES[0];
     if (fallback) {
       activeWorkspaceId = fallback.id;
-      const nameEl = $('#breadcrumb-workspace-name');
-      if (nameEl) nameEl.textContent = fallback.name;
-      if ($('#view-board')?.classList.contains('active')) renderBoard();
+      if ($('#view-task')?.classList.contains('active')) renderBoard();
     } else {
       openWorkspacesOverview();
     }
@@ -2655,7 +2823,6 @@ function workspaceCardHtml(workspace) {
           <p class="workspace-card-repo">${escapeHtml(workspace.repository)}</p>
         </div>
         <div class="workspace-card-tools">
-          ${workspaceMembersHtml(card.members)}
           <div class="workspace-card-actions">
             <button
               type="button"
@@ -2713,8 +2880,7 @@ function aggregateWorkspaceOverview() {
   const rows = WORKSPACES.map((workspace) => getWorkspaceCardData(workspace));
   return {
     workspaces: WORKSPACES.length,
-    activeAgents: rows.reduce((sum, row) => sum + row.members.length, 0),
-    activeAgentsDelta: 2,
+    openTasks: tasks.filter((task) => task.status !== 'closed').length,
     avgDailyPrs: rows.reduce((sum, row) => {
       const dailyAvg = row.history.prs.reduce((total, value) => total + value, 0) / row.history.prs.length;
       return sum + dailyAvg;
@@ -2774,9 +2940,8 @@ function renderWorkspacesPage() {
         <div class="workspaces-stat-value">${overview.workspaces}</div>
       </div>
       <div class="workspaces-stat-card">
-        <div class="workspaces-stat-label">Active agents</div>
-        <div class="workspaces-stat-value">${overview.activeAgents}</div>
-        <div class="workspaces-stat-delta">↑ +${overview.activeAgentsDelta}</div>
+        <div class="workspaces-stat-label">Open tasks</div>
+        <div class="workspaces-stat-value">${overview.openTasks}</div>
       </div>
       <div class="workspaces-stat-card">
         <div class="workspaces-stat-label">Avg daily PRs</div>
@@ -2794,10 +2959,41 @@ function renderWorkspacesPage() {
   }
 }
 
+function getFirstTaskIdForProject() {
+  const visible = tasksForTaskSidebar().filter((task) => !task.archived);
+  return visible[0]?.id || null;
+}
+
+function openFirstTaskForProject() {
+  const taskId = getFirstTaskIdForProject();
+  if (taskId) {
+    openTaskDetail(taskId);
+    return;
+  }
+
+  activeTaskId = null;
+  if (activeAppMode === 'design') {
+    designArtifactHtml = null;
+    renderDesignArtifact(null);
+    renderDesignChat();
+  }
+  renderBoardSubheader();
+  renderTaskSidebar();
+}
+
 function openWorkspacesOverview() {
   activeTaskId = null;
   renderWorkspacesPage();
   showView('workspaces');
+}
+
+function getDefaultTaskId() {
+  const visible = tasksForTaskSidebar().filter((task) => !task.archived);
+  const preferred = visible.find((task) => task.status === 'review' && task.commits > 0)
+    || visible.find((task) => task.status === 'in-progress')
+    || visible.find((task) => task.status === 'backlog')
+    || visible[0];
+  return preferred?.id || null;
 }
 
 function openWorkspace(workspaceId) {
@@ -2807,13 +3003,14 @@ function openWorkspace(workspaceId) {
 
   activeWorkspaceId = workspace.id;
   activeRepo = 'all';
-  activeAssignee = null;
 
-  const nameEl = $('#breadcrumb-workspace-name');
-  if (nameEl) nameEl.textContent = workspace.name;
+  $$('.repo-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.repo === 'all');
+  });
 
-  showView('board');
-  renderBoard();
+  const defaultTaskId = getDefaultTaskId();
+  if (defaultTaskId) openTaskDetail(defaultTaskId);
+  else renderBoard();
 }
 
 function openTaskDetail(taskId) {
@@ -2824,7 +3021,6 @@ function openTaskDetail(taskId) {
   activeDiffFileIndex = 0;
   activeDiffCommitIndex = 0;
   activeChangesFilter = 'uncommitted';
-  taskSidebarRepo = activeRepo;
   const task = getTask(taskId);
   if (!task) return;
 
@@ -2833,10 +3029,29 @@ function openTaskDetail(taskId) {
   badge.textContent = STATUS_LABELS[task.status];
   badge.className = `status-badge ${task.status}`;
 
-  $('#task-agent-assignee').innerHTML = formatTaskAssigneeHtml(task);
-
   updateTaskDetailLayout(task);
+  renderBoardSubheader();
   renderTaskSidebar();
+
+  if (activeAppMode === 'chat') {
+    showView('task');
+    return;
+  }
+
+  if (activeAppMode !== 'code') {
+    if (task.repo === 'design' && task.status !== 'backlog') {
+      if (activeAppMode === 'chat') {
+        setAppMode('design', { loadTask: false });
+      }
+      buildDesignPrototypeHtml(task.title).then((html) => {
+        designArtifactHtml = html;
+        renderDesignArtifact(html);
+      });
+    }
+    showView('task');
+    return;
+  }
+
   if (task.status !== 'backlog') {
     renderTaskChat();
     renderDiff();
@@ -2914,31 +3129,10 @@ function initTaskSetup() {
   $('#task-setup-form').addEventListener('submit', startTaskFromDetailSetup);
 }
 
-/* ── Render Kanban ── */
+/* ── Workspace header + sidebar refresh ── */
 function renderBoard() {
-  closeAssigneeMenu();
-  const columns = ['backlog', 'in-progress', 'review', 'closed'];
-
-  columns.forEach((status) => {
-    const body = $(`.column-body[data-drop="${status}"]`);
-    const createBtn = body.querySelector('.create-task-btn');
-    body.querySelectorAll('.task-card').forEach((c) => c.remove());
-
-    const statusTasks = tasksForBoard().filter((t) => t.status === status);
-    $(`[data-count="${status}"]`).textContent = statusTasks.length;
-
-    statusTasks.forEach((task) => {
-      const card = createTaskCard(task);
-      if (createBtn) {
-        body.insertBefore(card, createBtn);
-      } else {
-        body.appendChild(card);
-      }
-    });
-  });
-
   renderBoardSubheader();
-  requestAnimationFrame(() => renderTaskLinks());
+  renderTaskSidebar();
 }
 
 function getTaskCardElement(taskId) {
@@ -3190,7 +3384,6 @@ function insertTaskAtColumnPosition(task, status, insertIndex) {
 }
 
 function beginCardDrag(card, task, e) {
-  closeAssigneeMenu();
   const rect = card.getBoundingClientRect();
   const ghost = card.cloneNode(true);
   ghost.classList.add('task-card-ghost');
@@ -3310,7 +3503,6 @@ function initCardDrag(card, task) {
 
   card.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    if (e.target.closest('.assignee-trigger')) return;
     if (e.target.closest('.task-card-play')) return;
 
     startX = e.clientX;
@@ -3371,19 +3563,12 @@ function createTaskCard(task) {
     ${taskCardTagsHtml(task)}
     ${isReview ? reviewStatusCardHtml(task) : ''}
     <div class="task-card-footer">
-      ${assigneeTriggerHtml(task)}
       <div class="task-card-footer-actions">
         ${meta}
         ${taskCardFooterActionHtml(task)}
       </div>
     </div>
   `;
-
-  const assigneeBtn = card.querySelector('.assignee-trigger');
-  assigneeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openAssigneeMenu(assigneeBtn, task.id);
-  });
 
   const playBtn = card.querySelector('.task-card-play');
   playBtn?.addEventListener('click', (e) => {
@@ -3583,14 +3768,14 @@ async function thinkAndStream(container, steps, { stepDelay = 1000, leadDelay = 
   return timeline;
 }
 
-function commitTaskFromChat({ title, status, agentId, description, repo }) {
+function commitTaskFromChat({ title, status, description, repo }) {
   const task = {
     id: uid(),
     title,
     description: description || title,
     repo: repo || defaultRepoForNewTask(),
+    project: defaultProjectForNewTask(),
     status,
-    agentId: agentId || null,
     prs: 0,
     commits: 0,
     files: 0,
@@ -3602,8 +3787,7 @@ function commitTaskFromChat({ title, status, agentId, description, repo }) {
   return task;
 }
 
-function buildCreateTaskThinkingSteps(title, status, agentId) {
-  const agent = agentId ? getAgent(agentId) : null;
+function buildCreateTaskThinkingSteps(title, status) {
   const backlogCount = tasks.filter((t) => t.status === status).length;
 
   return [
@@ -3624,9 +3808,9 @@ function buildCreateTaskThinkingSteps(title, status, agentId) {
     {
       type: 'bash',
       dot: 'green',
-      label: '<strong>Bash</strong> Match task to agent',
-      in: `kimchi agents match --task "${title}"`,
-      out: agent ? `→ ${agent.name} (${agent.initials})` : '→ Unassigned',
+      label: '<strong>Bash</strong> Prepare task',
+      in: `kimchi task prepare --title "${title}"`,
+      out: '→ Ready to create',
     },
   ];
 }
@@ -3693,15 +3877,14 @@ function getKanbanBootstrapAgentSteps() {
       desc: 'read workspace config',
       code: `<span class="key">"workspace"</span>: <span class="val">"Kimchi Team"</span>,
 <span class="key">"repos"</span>: [<span class="val">"design"</span>, <span class="val">"backend"</span>, <span class="val">"frontend"</span>],
-<span class="key">"feature"</span>: <span class="val">"budgets"</span>,
-<span class="key">"agents"</span>: [<span class="val">"DP"</span>, <span class="val">"ZU"</span>, <span class="val">"BM"</span>, <span class="val">"CC"</span>]`,
+<span class="key">"feature"</span>: <span class="val">"budgets"</span>`,
     },
     {
       type: 'bash',
       dot: 'green',
       label: '<strong>Bash</strong> Plan budgets rollout',
       in: 'kimchi plan budgets --repos design,backend,frontend',
-      out: `${featureCount} tasks · 3 repos · 4 agents`,
+      out: `${featureCount} tasks · 3 repos`,
     },
     {
       type: 'bash',
@@ -3772,11 +3955,11 @@ function handleKanbanChat(text) {
 }
 
 async function runCreateTaskSimulation(container, response) {
-  const { title, status, agentId } = response.taskData;
+  const { title, status } = response.taskData;
 
   const timeline = await thinkAndStream(
     container,
-    buildCreateTaskThinkingSteps(title, status, agentId),
+    buildCreateTaskThinkingSteps(title, status),
     { stepDelay: 1100, leadDelay: 900 }
   );
 
@@ -3784,12 +3967,11 @@ async function runCreateTaskSimulation(container, response) {
   await sleep(1400 + Math.random() * 600);
   typing.remove();
 
-  const agent = agentId ? getAgent(agentId) : null;
   appendStepToTimeline(timeline, {
     type: 'bash',
     dot: 'green',
     label: '<strong>Bash</strong> Create kanban task',
-    in: `kimchi task create --title "${title}" --status ${status} --agent ${agent ? agent.initials : 'none'}`,
+    in: `kimchi task create --title "${title}" --status ${status}`,
     out: '<span class="bash-running">running…</span>',
   });
 
@@ -3838,12 +4020,11 @@ async function runCreateMultiTaskSimulation(container, response) {
     await sleep(1200 + Math.random() * 400);
     typing.remove();
 
-    const agent = spec.agentId ? getAgent(spec.agentId) : null;
     appendStepToTimeline(timeline, {
       type: 'bash',
       dot: 'green',
       label: '<strong>Bash</strong> Create kanban task',
-      in: `kimchi task create --title "${spec.title}" --repo ${spec.repo} --status backlog --agent ${agent ? agent.initials : 'none'}`,
+      in: `kimchi task create --title "${spec.title}" --repo ${spec.repo} --status backlog`,
       out: '<span class="bash-running">running…</span>',
     });
 
@@ -3862,8 +4043,7 @@ async function runCreateMultiTaskSimulation(container, response) {
 
   let recapHtml = '<p>Created <strong>3 tasks</strong> for the budget depletion alert:</p><ul>';
   created.forEach((task) => {
-    const agent = task.agentId ? getAgent(task.agentId) : null;
-    recapHtml += `<li><strong>${escapeHtml(task.title)}</strong> <span style="color:var(--text-muted)">${task.repo}${agent ? ` · ${agent.initials}` : ''} · Backlog</span></li>`;
+    recapHtml += `<li><strong>${escapeHtml(task.title)}</strong> <span style="color:var(--text-muted)">${task.repo} · Backlog</span></li>`;
   });
   recapHtml += '</ul>';
 
@@ -3883,16 +4063,13 @@ async function runCreateMultiTaskSimulation(container, response) {
       in: 'kimchi plan feature --name "budget-depletion-alert"',
       out: '3 tasks · design · backend · frontend',
     },
-    ...created.map((task) => {
-      const agent = task.agentId ? getAgent(task.agentId) : null;
-      return {
-        type: 'bash',
-        dot: 'green',
-        label: '<strong>Bash</strong> Create kanban task',
-        in: `kimchi task create --title "${task.title}" --repo ${task.repo} --status backlog --agent ${agent ? agent.initials : 'none'}`,
-        out: `✓ task #${task.id} created`,
-      };
-    }),
+    ...created.map((task) => ({
+      type: 'bash',
+      dot: 'green',
+      label: '<strong>Bash</strong> Create kanban task',
+      in: `kimchi task create --title "${task.title}" --repo ${task.repo} --status backlog`,
+      out: `✓ task #${task.id} created`,
+    })),
     recapStep,
   ];
 
@@ -3901,16 +4078,12 @@ async function runCreateMultiTaskSimulation(container, response) {
 }
 
 function buildCreatedTaskTextStep(task) {
-  const agent = task.agentId ? getAgent(task.agentId) : null;
-  const assigneeText = agent
-    ? `assigned to <strong>${agent.name}</strong>`
-    : 'left <strong>unassigned</strong>';
   return {
     type: 'text',
     dot: 'gray',
-    html: `<p>Created task in <strong>${STATUS_LABELS[task.status]}</strong>, ${assigneeText}:</p>
+    html: `<p>Created task in <strong>${STATUS_LABELS[task.status]}</strong>:</p>
       <div class="task-created" data-task-id="${task.id}">
-        ${agent ? avatarHtml(agent, 'xs') : unassignedAvatarHtml('xs')} <strong>${escapeHtml(task.title)}</strong> · ${task.repo}${agent ? ` · ${agent.initials}` : ''}
+        <strong>${escapeHtml(task.title)}</strong> · ${task.repo}
       </div>`,
   };
 }
@@ -3950,24 +4123,21 @@ function buildTeamWorkingOnResponse() {
   let html = '<p>Here\'s what the team is focused on:</p>';
   html += '<p><strong>Features in flight</strong></p><ul>';
   [...inProgress, ...review].forEach((t) => {
-    const agent = t.agentId ? getAgent(t.agentId) : null;
-    html += `<li><strong>${escapeHtml(t.title)}</strong> <span style="color:var(--text-muted)">${t.repo} · ${STATUS_LABELS[t.status]}${agent ? ` · ${agent.initials}` : ''}</span></li>`;
+    html += `<li><strong>${escapeHtml(t.title)}</strong> <span style="color:var(--text-muted)">${t.repo} · ${STATUS_LABELS[t.status]}</span></li>`;
   });
   html += '</ul>';
 
   if (backlogFeatures.length) {
     html += '<p><strong>Queued feature work</strong></p><ul>';
     backlogFeatures.forEach((t) => {
-      const agent = t.agentId ? getAgent(t.agentId) : null;
-      html += `<li>${escapeHtml(t.title)} <span style="color:var(--text-muted)">${t.repo}${agent ? ` · ${agent.initials}` : ''}</span></li>`;
+      html += `<li>${escapeHtml(t.title)} <span style="color:var(--text-muted)">${t.repo}</span></li>`;
     });
     html += '</ul>';
   }
 
   html += '<p><strong>Open bugs</strong></p><ul>';
   bugs.forEach((t) => {
-    const agent = t.agentId ? getAgent(t.agentId) : null;
-    html += `<li><strong>${escapeHtml(t.title)}</strong> <span style="color:var(--text-muted)">${t.repo} · ${STATUS_LABELS[t.status]}${agent ? ` · ${agent.initials}` : ''}</span></li>`;
+    html += `<li><strong>${escapeHtml(t.title)}</strong> <span style="color:var(--text-muted)">${t.repo} · ${STATUS_LABELS[t.status]}</span></li>`;
   });
   html += '</ul>';
 
@@ -3995,21 +4165,18 @@ function buildBudgetAlertResponse() {
         title: 'Design low-budget alert banner & threshold states',
         repo: 'design',
         status: 'backlog',
-        agentId: 'dp',
         description: 'Design low-budget alert banner & threshold states',
       },
       {
         title: 'Budget depletion alert API & webhook payloads',
         repo: 'backend',
         status: 'backlog',
-        agentId: 'cc',
         description: 'Budget depletion alert API & webhook payloads',
       },
       {
         title: 'Wire budget alert banner to threshold API',
         repo: 'frontend',
         status: 'backlog',
-        agentId: 'zu',
         description: 'Wire budget alert banner to threshold API',
       },
     ],
@@ -4027,11 +4194,10 @@ function processKanbanCommand(text) {
         html: `<p>Available commands:</p>
           <ul>
             <li><code>create task: [title]</code> — add to backlog</li>
-            <li><code>add "[title]" to [status] assign [agent]</code></li>
+            <li><code>add "[title]" to [status]</code></li>
             <li><code>list tasks</code> — show all tasks</li>
             <li><code>move [title] to [status]</code></li>
-          </ul>
-          <p>Agents: ${AGENTS.map((a) => a.initials).join(', ')}</p>`,
+          </ul>`,
       }],
       plain: 'help',
     };
@@ -4056,8 +4222,7 @@ function processKanbanCommand(text) {
     Object.entries(grouped).forEach(([status, list]) => {
       listHtml += `<li><strong>${STATUS_LABELS[status]}</strong> (${list.length})<ul>`;
       list.forEach((t) => {
-        const label = t.agentId ? getAgent(t.agentId).initials : 'Unassigned';
-        listHtml += `<li>${escapeHtml(t.title)} <span style="color:var(--text-muted)">(${t.repo})</span> — ${label}</li>`;
+        listHtml += `<li>${escapeHtml(t.title)} <span style="color:var(--text-muted)">(${t.repo})</span></li>`;
       });
       listHtml += '</ul></li>';
     });
@@ -4080,17 +4245,16 @@ function processKanbanCommand(text) {
 
   let match = text.match(/^create\s+task:\s*(.+)$/i);
   if (match) {
-    return createTaskFromChat(match[1].trim(), 'backlog', null);
+    return createTaskFromChat(match[1].trim(), 'backlog');
   }
 
-  match = text.match(/^add\s+["'](.+?)["']\s+to\s+(\w[\w-]*)\s*(?:assign\s+(\w+))?/i);
+  match = text.match(/^add\s+["'](.+?)["']\s+to\s+(\w[\w-]*)/i);
   if (match) {
     const title = match[1];
     let status = match[2].toLowerCase().replace(/\s+/g, '-');
     if (status === 'in') status = 'in-progress';
     if (!['backlog', 'in-progress', 'review', 'closed'].includes(status)) status = 'backlog';
-    const agentId = parseAgentInitials(match[3]) || null;
-    return createTaskFromChat(title, status, agentId);
+    return createTaskFromChat(title, status);
   }
 
   match = text.match(/^move\s+(.+?)\s+to\s+(\w[\w-]*)/i);
@@ -4129,7 +4293,7 @@ function processKanbanCommand(text) {
 
   match = text.match(/create\s+(?:a\s+)?task\s+(?:for\s+)?(.+)/i);
   if (match) {
-    return createTaskFromChat(match[1].trim(), 'backlog', AGENTS[Math.floor(Math.random() * AGENTS.length)].id);
+    return createTaskFromChat(match[1].trim(), 'backlog');
   }
 
   return {
@@ -4142,18 +4306,11 @@ function processKanbanCommand(text) {
   };
 }
 
-function parseAgentInitials(str) {
-  if (!str) return null;
-  const upper = str.toUpperCase();
-  const agent = AGENTS.find((a) => a.initials === upper || a.id === str.toLowerCase());
-  return agent?.id || null;
-}
-
-function createTaskFromChat(title, status, agentId) {
+function createTaskFromChat(title, status) {
   return {
     plain: `created: ${title}`,
     task: true,
-    taskData: { title, status, agentId, description: title },
+    taskData: { title, status, description: title },
   };
 }
 
@@ -4260,11 +4417,9 @@ function getNeedsInputPrompt(task) {
 
 function getNeedsInputTailSteps(task) {
   const prompt = getNeedsInputPrompt(task);
-  const agent = task.agentId ? getAgent(task.agentId) : null;
-  const agentName = agent?.name || 'Agent';
 
   return [
-    { type: 'label', dot: 'green', html: `<strong>${agentName}</strong> Blocked on a product decision…` },
+    { type: 'label', dot: 'green', html: '<strong>Agent</strong> Blocked on a product decision…' },
     {
       type: 'text',
       dot: 'gray',
@@ -4297,9 +4452,6 @@ function getFullNeedsInputChatSteps(task) {
 }
 
 function getNeedsInputContinuationSteps(task, option) {
-  const agent = task.agentId ? getAgent(task.agentId) : null;
-  const agentName = agent?.name || 'Agent';
-
   if (task.id === 't2') {
     const wiring = {
       'soft-delete': 'DELETE /budgets/{id} → archived=true, thresholds cleared',
@@ -4308,7 +4460,7 @@ function getNeedsInputContinuationSteps(task, option) {
     };
 
     return [
-      { type: 'label', dot: 'green', html: `<strong>${agentName}</strong> Continuing with your choice…` },
+      { type: 'label', dot: 'green', html: '<strong>Agent</strong> Continuing with your choice…' },
       {
         type: 'text',
         dot: 'gray',
@@ -4346,7 +4498,7 @@ function getNeedsInputContinuationSteps(task, option) {
     };
 
     return [
-      { type: 'label', dot: 'green', html: `<strong>${agentName}</strong> Continuing with your choice…` },
+      { type: 'label', dot: 'green', html: '<strong>Agent</strong> Continuing with your choice…' },
       {
         type: 'text',
         dot: 'gray',
@@ -4477,8 +4629,6 @@ function getReviewWorkPlan(task) {
   syncReviewReason(task);
   const repo = task.repo;
   const artifact = repo === 'backend' ? 'openapi/budgets.yaml' : 'src/features/budgets/budget-period-selector.tsx';
-  const agent = task.agentId ? getAgent(task.agentId) : null;
-  const agentName = agent?.name || 'Agent';
 
   if (task.reviewReason === 'needs-input') {
     return {
@@ -4491,7 +4641,7 @@ function getReviewWorkPlan(task) {
   return {
     phrases: ['Reviewing diff…', 'Running tests…', 'Preparing handoff…'],
     steps: [
-      { type: 'label', dot: 'green', html: `<strong>${agentName}</strong> Work complete — ready for your review` },
+      { type: 'label', dot: 'green', html: '<strong>Agent</strong> Work complete — ready for your review' },
       {
         type: 'bash', dot: 'green', label: '<strong>Bash</strong> Show diff stat',
         in: 'git diff --stat HEAD~1',
@@ -5211,8 +5361,7 @@ function renderTaskChat() {
         file: task.repo + '/README.md',
         desc: 'read task context',
         code: `<span class="key">"task"</span>: <span class="val">"${escapeHtml(task.title)}"</span>,
-<span class="key">"status"</span>: <span class="val">"${STATUS_LABELS[task.status]}"</span>,
-<span class="key">"agent"</span>: <span class="val">"${task.agentId ? getAgent(task.agentId).initials : 'Unassigned'}"</span>`,
+<span class="key">"status"</span>: <span class="val">"${STATUS_LABELS[task.status]}"</span>`,
       },
       {
         type: 'text',
@@ -5316,11 +5465,10 @@ function generateTaskResponse(text, task) {
   }
 
   if (lower.includes('status') || lower.includes('how')) {
-    const agent = task.agentId ? getAgent(task.agentId) : null;
     return [{
       type: 'text',
       dot: 'gray',
-      html: `<p>Task is in <strong>${STATUS_LABELS[task.status]}</strong>${agent ? `, assigned to ${agent.name} (${agent.initials})` : ', unassigned'}.</p>
+      html: `<p>Task is in <strong>${STATUS_LABELS[task.status]}</strong>.</p>
              <p>Changes: ${task.files} files, +${task.additions} -${task.deletions}</p>`,
     }];
   }
@@ -5333,36 +5481,112 @@ function generateTaskResponse(text, task) {
 }
 
 /* ── Task Sidebar ── */
+function sidebarTaskHtml(task) {
+  const active = task.id === activeTaskId ? ' active' : '';
+  return `<div class="sidebar-task${active}" data-id="${task.id}">
+    <span class="sidebar-leading">${sidebarTaskLeadingHtml(task)}</span>
+    <span class="sidebar-task-title">${escapeHtml(task.title)}</span>
+  </div>`;
+}
+
+function sidebarChatItemHtml(task) {
+  const active = task.id === activeTaskId ? ' active' : '';
+  return `<div class="sidebar-chat${active}" data-id="${task.id}">
+    <span class="sidebar-chat-title">${escapeHtml(task.title)}</span>
+  </div>`;
+}
+
+function renderChatSidebar(sidebar) {
+  const chats = tasksForTaskSidebar().filter((task) => !task.archived);
+  const itemsHtml = chats.map((task) => sidebarChatItemHtml(task)).join('');
+
+  sidebar.innerHTML = `
+    <div class="sidebar-create-wrap">
+      <button type="button" class="sidebar-create-btn" id="sidebar-new-chat-btn">
+        ${iconHtml('plus', { size: 12, className: 'lucide-icon' })}
+        New chat
+      </button>
+    </div>
+    <div class="sidebar-chat-list">${itemsHtml}</div>`;
+
+  initIcons(sidebar);
+
+  sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewDesignChat);
+
+  sidebar.querySelectorAll('.sidebar-chat').forEach((el) => {
+    el.addEventListener('click', () => openTaskDetail(el.dataset.id));
+  });
+}
+
 function renderTaskSidebar() {
   const sidebar = $('#task-sidebar');
-  const columns = ['backlog', 'in-progress', 'review', 'closed'];
+  if (!sidebar) return;
 
-  sidebar.innerHTML = columns
-    .map((status) => {
-      const statusTasks = tasksForTaskSidebar().filter((t) => t.status === status);
-      const items = statusTasks
-        .map((t) => {
-          const active = t.id === activeTaskId ? ' active' : '';
-          return `<div class="sidebar-task${active}" data-id="${t.id}">
-            <span class="sidebar-leading">${sidebarTaskLeadingHtml(t)}</span>
-            <span class="sidebar-task-title">${escapeHtml(t.title)}</span>
-          </div>`;
-        })
-        .join('');
+  if (activeAppMode === 'chat') {
+    renderChatSidebar(sidebar);
+    return;
+  }
+
+  const mode = activeAppMode === 'code' ? 'code' : 'design';
+  const sections = SIDEBAR_SECTIONS[mode];
+  const visibleTasks = tasksForTaskSidebar();
+
+  const activeTasksHtml = mode === 'code'
+    ? visibleTasks
+      .filter((task) => getSidebarBucket(task, mode) === 'active')
+      .map((task) => sidebarTaskHtml(task))
+      .join('')
+    : '';
+
+  const sectionsHtml = sections
+    .map((section) => {
+      const sectionTasks = visibleTasks.filter((task) => getSidebarBucket(task, mode) === section.id);
+      const items = sectionTasks.map((task) => sidebarTaskHtml(task)).join('');
+      const archiveBtn = section.showArchiveBtn
+        ? `<button type="button" class="sidebar-archive-btn" aria-label="Archive completed tasks">
+            ${iconHtml('archive', { size: 12, className: 'lucide-icon' })}
+          </button>`
+        : '';
 
       return `
         <div class="sidebar-section">
+          <div class="sidebar-section-divider" aria-hidden="true"></div>
           <div class="sidebar-section-header">
-            <span class="sidebar-leading"><span class="status-dot ${status}"></span></span>
+            <span class="sidebar-leading"><span class="status-dot ${section.dot}"></span></span>
             <span class="sidebar-section-label">
-              ${STATUS_LABELS[status]}
-              <span class="column-count">${statusTasks.length}</span>
+              ${section.label}
+              <span class="column-count">${sectionTasks.length}</span>
             </span>
+            ${archiveBtn}
           </div>
           <div class="sidebar-section-body">${items}</div>
         </div>`;
     })
     .join('');
+
+  const sidebarActionHtml = activeAppMode === 'code'
+    ? `<div class="sidebar-create-wrap">
+        <button type="button" class="sidebar-create-btn" id="sidebar-create-task-btn">
+          ${iconHtml('plus', { size: 12, className: 'lucide-icon' })}
+          New task
+        </button>
+      </div>`
+    : `<div class="sidebar-create-wrap">
+        <button type="button" class="sidebar-create-btn" id="sidebar-new-chat-btn">
+          ${iconHtml('plus', { size: 12, className: 'lucide-icon' })}
+          New prototype
+        </button>
+      </div>`;
+
+  sidebar.innerHTML = `
+    ${sidebarActionHtml}
+    ${activeTasksHtml ? `<div class="sidebar-active-tasks">${activeTasksHtml}</div>` : ''}
+    ${sectionsHtml}`;
+
+  initIcons(sidebar);
+
+  sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewDesignChat);
+  sidebar.querySelector('#sidebar-create-task-btn')?.addEventListener('click', openCreateTaskModal);
 
   sidebar.querySelectorAll('.sidebar-task').forEach((el) => {
     el.addEventListener('click', () => openTaskDetail(el.dataset.id));
@@ -5372,6 +5596,13 @@ function renderTaskSidebar() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       startTask(btn.dataset.taskId);
+    });
+  });
+
+  sidebar.querySelectorAll('.sidebar-archive-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      archiveCompletedTasks();
     });
   });
 }
@@ -5447,8 +5678,6 @@ function resetModalSelects() {
 function initRichSelects() {
   initRichSelect($('#permissions-select'), PERMISSION_MODES);
   initRichSelect($('#model-select'), MODEL_OPTIONS);
-  initRichSelect($('#kanban-permissions-select'), PERMISSION_MODES);
-  initRichSelect($('#kanban-model-select'), MODEL_OPTIONS);
   initRichSelect($('#task-permissions-select'), PERMISSION_MODES);
   initRichSelect($('#task-model-select'), MODEL_OPTIONS);
   initRichSelect($('#task-setup-permissions-select'), PERMISSION_MODES);
@@ -5460,17 +5689,19 @@ function initRichSelects() {
   });
 }
 
+function openCreateTaskModal() {
+  const modal = $('#create-task-modal');
+  const desc = $('#task-description');
+  modal?.showModal();
+  desc?.focus();
+}
+
 function initModal() {
   const modal = $('#create-task-modal');
   const form = $('#create-task-form');
   const desc = $('#task-description');
   const createBtn = $('#modal-create-btn');
   const startBtn = $('#modal-start-btn');
-
-  const openModal = () => {
-    modal.showModal();
-    desc.focus();
-  };
 
   modal.addEventListener('close', closeRichSelects);
   form.addEventListener('reset', resetModalSelects);
@@ -5483,7 +5714,7 @@ function initModal() {
 
   desc.addEventListener('input', updateButtons);
 
-  $('#create-task-btn').addEventListener('click', openModal);
+  $('#create-task-btn')?.addEventListener('click', openCreateTaskModal);
   $('#modal-cancel').addEventListener('click', () => modal.close());
 
   modal.addEventListener('click', (e) => {
@@ -5501,8 +5732,8 @@ function initModal() {
       title,
       description,
       repo: defaultRepoForNewTask(),
+      project: defaultProjectForNewTask(),
       status,
-      agentId: null,
       permissionMode: fd.get('permissions'),
       model: fd.get('model'),
       prs: 0,
@@ -5518,7 +5749,8 @@ function initModal() {
   }
 
   createBtn.addEventListener('click', () => {
-    const task = addTask('backlog');
+    const status = activeAppMode !== 'code' ? 'in-progress' : 'backlog';
+    const task = addTask(status);
     if (!task) return;
     if (!form.createMore.checked) {
       modal.close();
@@ -5624,12 +5856,6 @@ function initEvents() {
     showSnackbar('Create workspace is not available in this prototype.');
   });
 
-  $('#back-to-board').addEventListener('click', () => {
-    activeTaskId = null;
-    showView('board');
-    renderBoard();
-  });
-
   $('#close-task-btn').addEventListener('click', () => {
     const task = getTask(activeTaskId);
     if (task) closeTask(task);
@@ -5637,16 +5863,8 @@ function initEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-      const modal = $('#create-task-modal');
-      modal.showModal();
-      $('#task-description').focus();
+      openCreateTaskModal();
     }
-  });
-
-  // Delegate task-created clicks in kanban chat
-  $('#kanban-chat-messages').addEventListener('click', (e) => {
-    const el = e.target.closest('.task-created');
-    if (el?.dataset.taskId) openTaskDetail(el.dataset.taskId);
   });
 
   $$('.repo-tab:not(.add-repo)').forEach((tab) => {
@@ -5654,28 +5872,8 @@ function initEvents() {
       $$('.repo-tab').forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
       activeRepo = tab.dataset.repo || 'all';
-      activeAssignee = null;
-      renderBoard();
+      openFirstTaskForProject();
     });
-  });
-
-  $('#board-avatar-stack')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.avatar-stack-btn');
-    if (!btn?.dataset.agentId) return;
-    activeAssignee = activeAssignee === btn.dataset.agentId ? null : btn.dataset.agentId;
-    renderBoard();
-  });
-
-  $$('.column-play-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      startAllColumnTasks(btn.dataset.startColumn);
-    });
-  });
-
-  $('#archive-closed-btn')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    archiveClosedTasks();
   });
 }
 
@@ -5750,13 +5948,9 @@ function init() {
   initIcons();
   hydrateNeedsInputReviewTasks();
   initInProgressSimulation();
-  renderBoard();
-  initDragDrop();
-  initTaskLinks();
   initInProgressStatsTick();
-  initAssigneeMenu();
-  initKanbanChat();
   initTaskChat();
+  initDesignChat();
   initRichSelects();
   initTaskSetup();
   initModal();
@@ -5767,9 +5961,22 @@ function init() {
   initWorkspaceStatsMenus();
   initTooltips();
   initWorkspaceChartTooltips();
+  initAppMode();
   initEvents();
-  renderDiff();
-  renderBrowserPreview();
+  renderBoardSubheader();
+
+  if (activeAppMode === 'code') {
+    const defaultTaskId = getDefaultTaskId();
+    if (defaultTaskId) openTaskDetail(defaultTaskId);
+    else renderBoard();
+  } else if (activeAppMode === 'design') {
+    renderDesignChat();
+    renderDesignArtifact(null);
+    renderTaskSidebar();
+  } else {
+    renderGeneralChat();
+    renderTaskSidebar();
+  }
 }
 
 init();

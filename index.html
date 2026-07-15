@@ -13,7 +13,7 @@
       }
     }());
   </script>
-  <title>Studio — Kimchi Kanban</title>
+  <title>Studio — Kimchi Team</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -22,160 +22,10 @@
 <body>
   <div id="snackbar-root" class="snackbar-root" aria-live="polite"></div>
   <div id="app">
-    <!-- ═══════════════ BOARD VIEW ═══════════════ -->
-    <div id="view-board" class="view active">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button class="icon-btn sidebar-toggle" aria-label="Toggle sidebar">
-            <span class="icon-slot" data-icon="menu" data-size="16"></span>
-          </button>
-          <img src="assets/kimchi-logo-dark.png" alt="Kimchi" class="kimchi-logo-img" width="88" height="20" />
-          <nav class="breadcrumb">
-            <button type="button" class="breadcrumb-link" id="breadcrumb-studio-link">Studio</button>
-            <span class="breadcrumb-sep">/</span>
-            <span class="breadcrumb-current" id="breadcrumb-workspace-name">Kimchi Team</span>
-            <span class="icon-slot breadcrumb-chevron" data-icon="chevron-down" data-size="12"></span>
-          </nav>
-        </div>
-        <div class="topbar-actions">
-          <button type="button" class="icon-btn theme-toggle" aria-label="Switch to light mode">
-            <span class="icon-slot theme-toggle-icon" data-icon="sun" data-size="16"></span>
-          </button>
-          <a href="#" class="account-link">
-            <span class="icon-slot" data-icon="user" data-size="16"></span>
-            Account
-          </a>
-        </div>
-      </header>
-
-      <div class="subheader">
-        <div class="repo-tabs">
-          <button class="repo-tab active" data-repo="all">All repos</button>
-          <button class="repo-tab" data-repo="design">design</button>
-          <button class="repo-tab" data-repo="backend">backend</button>
-          <button class="repo-tab" data-repo="frontend">frontend</button>
-          <button class="repo-tab add-repo" type="button">
-            <span class="icon-slot" data-icon="plus" data-size="12" data-icon-class="lucide-icon"></span>
-            New repository
-          </button>
-        </div>
-        <div class="subheader-right">
-          <div class="avatar-stack" id="board-avatar-stack"></div>
-          <span class="workspace-pill workspace-pill-files" id="board-workspace-files"></span>
-          <button type="button" class="workspace-pill workspace-pill-pr workspace-pill-btn" id="board-workspace-prs" aria-haspopup="menu" aria-expanded="false"></button>
-          <button type="button" class="workspace-pill workspace-pill-commits workspace-pill-btn" id="board-workspace-commits" aria-haspopup="menu" aria-expanded="false"></button>
-          <button class="workspace-tool-btn" type="button" aria-label="Terminal">
-            <span class="icon-slot" data-icon="square-terminal" data-size="14"></span>
-          </button>
-          <button class="workspace-tool-btn" type="button" aria-label="Settings">
-            <span class="icon-slot" data-icon="settings" data-size="14"></span>
-          </button>
-        </div>
-      </div>
-
-      <main class="board-layout">
-        <!-- Kimchi Agent Chat -->
-        <aside class="agent-panel" id="kanban-agent-panel">
-          <div class="panel-header">
-            <h2>Kanban agent</h2>
-            <span class="panel-sub">Ask me to create or manage tasks</span>
-          </div>
-          <div class="chat-messages" id="kanban-chat-messages"></div>
-          <div class="chat-input-area">
-            <div class="chat-compose">
-              <div class="chat-input-wrap">
-                <textarea id="kanban-chat-input" rows="1" placeholder="Ask anything…" autocomplete="off"></textarea>
-                <button class="send-btn" type="button" data-send="kanban" aria-label="Send">
-                  <span class="icon-slot" data-icon="arrow-up" data-size="16" data-icon-class="lucide-icon"></span>
-                </button>
-              </div>
-              <div class="chat-compose-tools">
-                <button class="compose-pill icon-only" type="button" aria-label="Attach">
-                  <span class="icon-slot" data-icon="square-slash" data-size="14"></span>
-                </button>
-                <div class="compose-select-wrap rich-select-wrap" id="kanban-permissions-select" data-default="ask-edits" data-menu-placement="up">
-                  <button type="button" class="compose-pill rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="rich-select-value">Ask before edits</span>
-                    <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
-                  </button>
-                  <div class="rich-select-menu" hidden role="listbox" aria-label="Permissions"></div>
-                  <input type="hidden" name="permissions" value="ask-edits" />
-                </div>
-                <div class="compose-select-wrap rich-select-wrap" id="kanban-model-select" data-default="multi" data-menu-placement="up">
-                  <button type="button" class="compose-pill rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="rich-select-value">Multi-model</span>
-                    <span class="icon-slot" data-icon="chevron-down" data-size="10" data-icon-class="lucide-icon lucide-muted"></span>
-                  </button>
-                  <div class="rich-select-menu" hidden role="listbox" aria-label="Model"></div>
-                  <input type="hidden" name="model" value="multi" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <!-- Kanban Columns -->
-        <div class="kanban-board-wrap">
-          <svg class="task-links-layer" id="task-links-layer" aria-hidden="true"></svg>
-          <div class="kanban-board" id="kanban-board">
-          <div class="kanban-column" data-status="backlog">
-            <div class="column-header">
-              <span class="status-dot backlog"></span>
-              <span class="column-title">Backlog</span>
-              <button type="button" class="column-header-action column-play-btn" data-start-column="backlog" aria-label="Start all tasks">
-                <span class="icon-slot" data-icon="play" data-size="12" data-icon-class="lucide-icon"></span>
-              </button>
-              <span class="column-count" data-count="backlog">0</span>
-            </div>
-            <div class="column-body" data-drop="backlog">
-              <button class="create-task-btn" id="create-task-btn">
-                <span class="icon-slot" data-icon="plus" data-size="14"></span>
-                Create task <kbd>c</kbd>
-              </button>
-            </div>
-          </div>
-
-          <div class="kanban-column" data-status="in-progress">
-            <div class="column-header">
-              <span class="status-dot in-progress"></span>
-              <span class="column-title">In Progress</span>
-              <span class="column-count" data-count="in-progress">0</span>
-            </div>
-            <div class="column-body" data-drop="in-progress"></div>
-          </div>
-
-          <div class="kanban-column" data-status="review">
-            <div class="column-header">
-              <span class="status-dot review"></span>
-              <span class="column-title">Review</span>
-              <span class="column-count" data-count="review">0</span>
-            </div>
-            <div class="column-body" data-drop="review"></div>
-          </div>
-
-          <div class="kanban-column" data-status="closed">
-            <div class="column-header">
-              <span class="status-dot closed"></span>
-              <span class="column-title">Closed</span>
-              <button type="button" class="column-header-action column-archive-btn has-tooltip" id="archive-closed-btn" data-tooltip="Archive closed tasks" aria-label="Archive closed tasks">
-                <span class="icon-slot" data-icon="trash-2" data-size="12" data-icon-class="lucide-icon"></span>
-              </button>
-              <span class="column-count" data-count="closed">0</span>
-            </div>
-            <div class="column-body" data-drop="closed"></div>
-          </div>
-          </div>
-        </div>
-      </main>
-    </div>
-
     <!-- ═══════════════ WORKSPACES VIEW ═══════════════ -->
     <div id="view-workspaces" class="view">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-btn sidebar-toggle" aria-label="Toggle sidebar">
-            <span class="icon-slot" data-icon="menu" data-size="16"></span>
-          </button>
           <img src="assets/kimchi-logo-dark.png" alt="Kimchi" class="kimchi-logo-img" width="88" height="20" />
           <nav class="breadcrumb">
             <span class="breadcrumb-current">Studio</span>
@@ -211,21 +61,22 @@
     </div>
 
     <!-- ═══════════════ TASK DETAIL VIEW ═══════════════ -->
-    <div id="view-task" class="view">
+    <div id="view-task" class="view active" data-app-mode="chat">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-btn sidebar-toggle" aria-label="Toggle sidebar">
-            <span class="icon-slot" data-icon="menu" data-size="16"></span>
-          </button>
+          <img src="assets/kimchi-logo-dark.png" alt="Kimchi" class="kimchi-logo-img" width="88" height="20" />
           <nav class="breadcrumb">
-            <span class="breadcrumb-muted">Acme API</span>
+            <button type="button" class="breadcrumb-link" id="breadcrumb-studio-link">App</button>
           </nav>
         </div>
-        <div class="topbar-right">
-          <button class="btn-ghost">
-            <span class="icon-slot" data-icon="share" data-size="14" data-icon-class="lucide-icon lucide-inline"></span>
-            Share
-          </button>
+        <div class="topbar-center">
+          <div class="app-mode-switch" role="tablist" aria-label="App mode">
+            <button type="button" class="app-mode-tab active" data-app-mode="chat" role="tab" aria-selected="true">Chat</button>
+            <button type="button" class="app-mode-tab" data-app-mode="design" role="tab" aria-selected="false">Design</button>
+            <button type="button" class="app-mode-tab" data-app-mode="code" role="tab" aria-selected="false">Code</button>
+          </div>
+        </div>
+        <div class="topbar-actions">
           <button type="button" class="icon-btn theme-toggle" aria-label="Switch to light mode">
             <span class="icon-slot theme-toggle-icon" data-icon="sun" data-size="16"></span>
           </button>
@@ -236,29 +87,98 @@
         </div>
       </header>
 
-      <div class="task-subheader">
-        <button class="back-btn" id="back-to-board" aria-label="Back to board">
-          <span class="icon-slot" data-icon="chevron-left" data-size="16"></span>
-        </button>
-        <h1 class="task-title-header" id="task-detail-title">Implement authentication properly</h1>
-        <div class="task-subheader-right">
-          <span class="status-badge in-progress" id="task-status-badge">In progress</span>
-          <button class="icon-btn" aria-label="Settings">
-            <span class="icon-slot" data-icon="settings" data-size="16"></span>
+      <div class="subheader">
+        <div class="repo-tabs">
+          <button class="repo-tab active" data-repo="all">All projects</button>
+          <button class="repo-tab" data-repo="kimchi">Kimchi</button>
+          <button class="repo-tab" data-repo="one-click">One-click</button>
+          <button class="repo-tab" data-repo="hackathon">Hackathon</button>
+          <button class="repo-tab add-repo" type="button">
+            <span class="icon-slot" data-icon="plus" data-size="12" data-icon-class="lucide-icon"></span>
+            New project
           </button>
-          <button class="btn-primary" id="close-task-btn">Close task</button>
+        </div>
+        <div class="subheader-right code-mode-only">
+          <span class="workspace-pill workspace-pill-files" id="board-workspace-files"></span>
+          <button type="button" class="workspace-pill workspace-pill-pr workspace-pill-btn" id="board-workspace-prs" aria-haspopup="menu" aria-expanded="false"></button>
+          <button type="button" class="workspace-pill workspace-pill-commits workspace-pill-btn" id="board-workspace-commits" aria-haspopup="menu" aria-expanded="false"></button>
+          <button class="workspace-tool-btn" type="button" aria-label="Settings">
+            <span class="icon-slot" data-icon="settings" data-size="14"></span>
+          </button>
         </div>
       </div>
 
       <main class="task-layout">
-        <!-- Mini Kanban Sidebar -->
         <aside class="task-sidebar" id="task-sidebar"></aside>
 
+        <div class="task-main">
+          <div class="task-subheader code-mode-only">
+            <h1 class="task-title-header" id="task-detail-title">Implement authentication properly</h1>
+            <div class="task-subheader-right">
+              <span class="status-badge in-progress" id="task-status-badge">In progress</span>
+              <button class="icon-btn" aria-label="Settings">
+                <span class="icon-slot" data-icon="settings" data-size="16"></span>
+              </button>
+              <button class="btn-primary" id="close-task-btn">Close task</button>
+            </div>
+          </div>
+
+          <div class="task-main-panels">
+        <div class="chat-layout" id="chat-layout">
+          <section class="agent-panel general-chat-panel">
+            <div class="chat-messages" id="general-chat-messages"></div>
+            <div class="chat-input-area">
+              <div class="chat-compose">
+                <div class="chat-input-wrap">
+                  <textarea id="general-chat-input" rows="1" placeholder="Ask anything…" autocomplete="off"></textarea>
+                  <button class="send-btn" type="button" data-send="general" aria-label="Send">
+                    <span class="icon-slot" data-icon="arrow-up" data-size="16" data-icon-class="lucide-icon"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="design-layout" id="design-layout">
+          <section class="agent-panel design-chat-panel">
+            <div class="chat-messages" id="design-chat-messages"></div>
+            <div class="chat-input-area">
+              <div class="chat-compose">
+                <div class="chat-input-wrap">
+                  <textarea id="design-chat-input" rows="1" placeholder="Describe a screen to prototype…" autocomplete="off"></textarea>
+                  <button class="send-btn" type="button" data-send="design" aria-label="Send">
+                    <span class="icon-slot" data-icon="arrow-up" data-size="16" data-icon-class="lucide-icon"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="artifact-panel">
+            <div class="artifact-panel-header">
+              <span class="artifact-panel-label">
+                <span class="icon-slot" data-icon="layout-grid" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                Artifact preview
+              </span>
+              <span class="artifact-panel-meta" id="design-artifact-meta">HTML · CSS</span>
+            </div>
+            <div class="artifact-frame-wrap">
+              <iframe id="design-artifact-frame" class="artifact-frame" title="Artifact preview" sandbox="allow-scripts allow-same-origin" hidden></iframe>
+              <div class="artifact-empty" id="design-artifact-empty">
+                <span class="icon-slot" data-icon="layout-grid" data-size="28" data-icon-class="lucide-icon lucide-muted"></span>
+                <p class="artifact-empty-title">No artifact yet</p>
+                <p class="artifact-empty-hint">Start a chat to generate a standalone HTML &amp; CSS prototype.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="code-layout" id="code-layout">
         <!-- Task Agent Chat -->
         <section class="agent-panel task-agent-panel">
           <div class="panel-header">
             <h2 id="task-agent-panel-title">Task agent</h2>
-            <div class="agent-assignee" id="task-agent-assignee"></div>
           </div>
 
           <div id="task-setup-panel" class="task-setup-panel" hidden>
@@ -435,6 +355,9 @@
           </div>
           </div>
         </section>
+        </div>
+          </div>
+        </div>
       </main>
     </div>
   </div>
@@ -513,7 +436,6 @@
     </form>
   </dialog>
 
-  <div id="assignee-menu" class="assignee-menu" hidden role="listbox" aria-label="Select a user"></div>
   <div id="workspace-stats-menu" class="workspace-stats-menu" hidden role="menu"></div>
 
   <script type="module" src="app.js"></script>

@@ -35,6 +35,7 @@ import {
   Sun,
   Moon,
   EllipsisVertical,
+  Archive,
 } from 'lucide';
 
 const ICONS = {
@@ -73,6 +74,7 @@ const ICONS = {
   sun: Sun,
   moon: Moon,
   'ellipsis-vertical': EllipsisVertical,
+  archive: Archive,
 };
 
 const defaults = { 'stroke-width': 2 };
