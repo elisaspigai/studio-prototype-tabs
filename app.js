@@ -1,4 +1,5 @@
 import { iconHtml, initIcons } from './icons.js';
+import { getSubheaderModeConfig } from './app-mode.js';
 
 /* ── Agents ── */
 const STATUS_LABELS = {
@@ -32,9 +33,9 @@ const DELIVERY_MODES = [
 const REVIEW_REASONS = {
   'needs-input': {
     icon: 'message-circle',
-    cardLabel: 'Needs input',
+    cardLabel: 'Needs you',
     iconClass: 'lucide-orange',
-    snackbarMessage: '1 agent needs input',
+    snackbarMessage: '1 agent needs you',
   },
   ready: {
     icon: 'check-check',
@@ -46,14 +47,14 @@ const REVIEW_REASONS = {
 
 const SIDEBAR_SECTIONS = {
   design: [
+    { id: 'needs-input', label: 'Needs you', dot: 'needs-input' },
     { id: 'in-progress', label: 'In progress', dot: 'in-progress' },
-    { id: 'needs-input', label: 'Needs input', dot: 'needs-input' },
-    { id: 'done', label: 'Done', dot: 'done' },
+    { id: 'done', label: 'Open', dot: 'done' },
     { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
   ],
   code: [
+    { id: 'needs-input', label: 'Needs you', dot: 'needs-input' },
     { id: 'in-progress', label: 'In progress', dot: 'in-progress' },
-    { id: 'needs-input', label: 'Needs input', dot: 'needs-input' },
     { id: 'done', label: 'Done', dot: 'done' },
     { id: 'merged', label: 'Merged', dot: 'merged' },
     { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
@@ -325,6 +326,159 @@ function hydrateMockModeChats() {
           },
         ],
       },
+      {
+        role: 'user',
+        text: 'Can we add a subtle animation to the period toggle so the switch feels responsive?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Adding interaction details…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/overview.canvas',
+            desc: 'update interaction specs',
+            code: `<span class="key">Interaction</span>: periodToggle
+<span class="key">Motion</span>: 150ms ease-out scale + translate
+<span class="key">States</span>: week, month, quarter`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Added a 150ms ease-out transition to the toggle thumb and matched the easing token from the design system. The prototype now cycles through week, month, and quarter states.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Looks good — export the handoff bundle so frontend can pick it up.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'bash',
+            dot: 'green',
+            label: '<strong>Bash</strong> Export handoff bundle',
+            in: 'kimchi proto export budgets --frame overview',
+            out: '✓ tokens + HTML/CSS exported',
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Handoff bundle exported. Frontend can pull the standalone HTML/CSS and match spacing tokens from <code>design-handoff/budgets/tokens.json</code>.</p>',
+          },
+        ],
+      },
+    ],
+    t3: [
+      {
+        role: 'user',
+        text: 'Does the budgets overview prototype include hover states for the category rows?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Checking prototype handoff…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/overview.canvas',
+            desc: 'category row interactions',
+            code: `<span class="key">Row</span>: CategoryRow
+<span class="key">Hover</span>: surface-elevated background
+<span class="key">Active</span>: row expands to BudgetDetail`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Yes — rows lift on hover with a surface-elevated background and expand to a detail panel on click. The handoff notes include the exact padding and transition timing.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Which spacing tokens should I use for the dashboard grid?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Use these tokens from the handoff:</p><ul><li><code>spacing.grid-gap</code>: 16px between cards</li><li><code>spacing.page-padding</code>: 24px horizontal</li><li><code>spacing.section-gap</code>: 32px below the summary strip</li></ul>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Got it — I will align the dashboard layout to the prototype specs.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Sounds good. Ping me when the grid is wired and I can compare the rendered layout against the prototype frames.</p>',
+          },
+        ],
+      },
+    ],
+    t4: [
+      {
+        role: 'user',
+        text: 'What are the exact width and keyboard interaction specs for the period selector?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Pulling selector specs…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/period-selector.canvas',
+            desc: 'segmented control specs',
+            code: `<span class="key">Width</span>: 240px
+<span class="key">Height</span>: 36px
+<span class="key">Keyboard</span>: Left/Right arrows, Enter to confirm`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>The selector is a 240px-wide segmented control with arrow-key navigation. Focus wraps at the ends and Enter commits the selection to the URL.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Should the selected state use the accent or primary color token?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Use <code>color.primary</code> for the active segment background and <code>color.text-on-primary</code> for the label. The inactive segments keep <code>color.surface</code> with a subtle border.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Primary it is. I will match the token names from the handoff.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Perfect. Once the component is built, we can drop it into the overview prototype to verify the transition timing.</p>',
+          },
+        ],
+      },
     ],
     t6: [
       {
@@ -381,6 +535,82 @@ function hydrateMockModeChats() {
           },
         ],
       },
+      {
+        role: 'user',
+        text: "Let's go with modal confirmation to reduce accidental threshold changes.",
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Updating confirmation flow…' },
+          {
+            type: 'bash',
+            dot: 'green',
+            label: '<strong>Bash</strong> Re-link confirmation hotspot',
+            in: 'kimchi proto link editing-flow.canvas --hotspots save-btn,threshold-input,confirm-modal',
+            out: '5 hotspots wired',
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Added a confirmation modal frame that shows the old and new threshold values. The prototype now flows: edit amount → set threshold → confirm → alert banner update.</p>',
+          },
+        ],
+      },
+    ],
+    t7: [
+      {
+        role: 'user',
+        text: 'Which API fields from the budgets contract map to the spent and limit labels on the card?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Reading API contract…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'openapi/budgets.yaml',
+            desc: 'BudgetSummary schema',
+            code: `<span class="key">spent</span>: <span class="val">number</span>
+<span class="key">limit</span>: <span class="val">number</span>
+<span class="key">utilization</span>: <span class="val">number (computed)</span>`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Map <code>spent</code> to the left metric and <code>limit</code> to the right. The API also returns <code>utilization</code> as a computed ratio so you do not need to calculate it client-side.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Does the card support a category breakdown from the design prototype?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Not in this scope. The prototype shows a summary card only. Categories will come from the backend migration in t12, so we can add a category breakdown in a follow-up task.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'I will start with summary fields and add categories once the migration lands.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Good call. Keep the card props limited to <code>BudgetSummary</code> for now and we will extend the type when categories are available.</p>',
+          },
+        ],
+      },
     ],
     t11: [
       {
@@ -427,6 +657,89 @@ function hydrateMockModeChats() {
           },
         ],
       },
+      {
+        role: 'user',
+        text: 'Can we add a one-minute onboarding tooltip tour for first-time users?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>I can add a three-step tooltip tour: summary strip, create-budget CTA, and period selector. Should the tour auto-start or appear on demand from a help button?</p>',
+          },
+          {
+            type: 'actions',
+            dot: 'gray',
+            buttons: [
+              { label: 'Auto-start on first visit', action: 'needs-input:auto', primary: true },
+              { label: 'Show on help button click', action: 'needs-input:manual', primary: false },
+            ],
+          },
+        ],
+      },
+    ],
+    t13: [
+      {
+        role: 'user',
+        text: 'What is the row height and column spacing for the budget list skeleton?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          { type: 'label', dot: 'green', html: '<strong>Agent</strong> Pulling skeleton specs…' },
+          {
+            type: 'file-read',
+            dot: 'green',
+            file: 'prototypes/budgets/overview.canvas',
+            desc: 'budget row geometry',
+            code: `<span class="key">Row height</span>: 56px
+<span class="key">Columns</span>: name, spent, limit, utilization, actions
+<span class="key">Gap</span>: 12px between rows`,
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>The skeleton row should mirror the final row height of 56px and match the five-column layout so there is no layout shift when data loads.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Should the skeletons pulse or use a static shimmer?',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Use the static shimmer animation from the design system — it matches the skeleton used in other lists and avoids the higher contrast of a pulsing block.</p>',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        text: 'Static shimmer matches the rest of the app. Export the specs so I can implement the component.',
+      },
+      {
+        role: 'agent',
+        steps: [
+          {
+            type: 'bash',
+            dot: 'green',
+            label: '<strong>Bash</strong> Export skeleton specs',
+            in: 'kimchi proto export budgets --frame skeleton-specs',
+            out: '✓ skeleton tokens exported',
+          },
+          {
+            type: 'text',
+            dot: 'gray',
+            html: '<p>Exported. The component should render four skeleton rows by default, matching the page size in the API contract.</p>',
+          },
+        ],
+      },
     ],
   };
 
@@ -454,6 +767,170 @@ function hydrateMockModeChats() {
           type: 'text',
           dot: 'gray',
           html: '<p>One threshold per budget today. Multiple thresholds are on the roadmap — the Granola research called out wanting both warning and critical levels.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'What should the overview prototype surface about alerts so users understand the behavior?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Show the alert pill on rows above 80% utilization and a tooltip explaining the threshold. Keep the banner out of the overview scope; it belongs to the editing flow in t6.</p>',
+        }],
+      },
+    ],
+    t2: [
+      {
+        role: 'user',
+        text: 'What is the current status of the budgets CRUD API?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>The list, create, and update routes are implemented in <code>src/routes/budgets.ts</code>. Integration tests cover happy paths and validation errors. TypeScript types were generated from the OpenAPI contract.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Do we need soft deletes or hard deletes for budgets?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Soft delete via an <code>archivedAt</code> timestamp. Hard delete is risky for audit trails and would cascade to spend history. The archive endpoint is already in the router.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Any blockers before I move this to review?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>One open question: should budget names be unique per workspace? The spec does not say, and the integration tests currently allow duplicates. Decide before review.</p>',
+        }],
+      },
+    ],
+    t3: [
+      {
+        role: 'user',
+        text: 'How should the budgets dashboard fetch data on initial load?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Use the new <code>useBudgets</code> hook. It calls <code>GET /budgets</code> server-side paginated and returns a summary array. Pass the result into the dashboard grid.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Does the prototype define empty and error states for the dashboard?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes — the empty state comes from t11 and the error state uses the generic ErrorBoundary card. Match the exact copy and illustration placeholders from the handoff.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Should we prefetch budget categories too, or keep the first version lean?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Keep it lean. Categories depend on the t12 migration. Wire only summary fields now and extend the hook once categories are available in the API.</p>',
+        }],
+      },
+    ],
+    t4: [
+      {
+        role: 'user',
+        text: 'Is the period selector a controlled or uncontrolled component?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Controlled. The source of truth is the <code>period</code> query parameter, and the component reflects that value. This keeps the dashboard shareable via URL.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Should selecting a period update the URL or just local React state?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Update the URL with <code>router.replace</code>. That way the back button works and users can bookmark a specific period view.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Which analytics event should we fire when the period changes?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Fire <code>budget_period_changed</code> with properties <code>from</code>, <code>to</code>, and <code>source: "selector"</code>. Add it to the existing analytics dictionary.</p>',
+        }],
+      },
+    ],
+    t5: [
+      {
+        role: 'user',
+        text: 'Is the budgets OpenAPI contract ready to publish?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes — the schema is at version 1.0.0 and covers CRUD, threshold updates, and alert payloads. The linter passes and examples are included for every request body.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Where will the generated TypeScript types live so frontend can import them?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>They will be published to the <code>@kimchi/api-contracts</code> package. Frontend can import <code>BudgetSummary</code>, <code>CreateBudgetInput</code>, and <code>BudgetAlert</code> from there.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Do we need to version the contract separately from the app release?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>For now the contract version matches the API minor version. Once we hit public beta we should move to date-based versioning so external integrations do not break.</p>',
         }],
       },
     ],
@@ -485,30 +962,320 @@ function hydrateMockModeChats() {
           html: '<p>Ship inline amount edit plus a single threshold field with validation errors. Defer multi-threshold and email alerts — the interview pain was discoverability, not notification channels.</p>',
         }],
       },
-    ],
-    t11: [
       {
         role: 'user',
-        text: 'Help me brainstorm copy for the Kimchi pricing page hero section.',
+        text: 'Should we include a destructive confirmation when lowering a threshold?',
       },
       {
         role: 'agent',
         steps: [{
           type: 'text',
           dot: 'gray',
-          html: '<p>Here are three directions:</p><p><strong>1. Outcome-led:</strong> "Ship AI-assisted workflows your team actually finishes."</p><p><strong>2. Speed-led:</strong> "From idea to merged PR — without leaving Kimchi."</p><p><strong>3. Trust-led:</strong> "Studio, agents, and code review in one place."</p>',
+          html: '<p>Yes. Lowering a threshold can trigger an immediate alert, so show a modal summarizing the old and new value. Use the same pattern for archive actions to keep the UX consistent.</p>',
+        }],
+      },
+    ],
+    t7: [
+      {
+        role: 'user',
+        text: 'Which hook should fetch data for the budget cards?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Use <code>useBudget(budgetId)</code> for individual cards and <code>useBudgets()</code> for the list. Both wrap the generated <code>@kimchi/api-contracts</code> clients and share query keys.</p>',
         }],
       },
       {
         role: 'user',
-        text: 'The audience is engineering managers evaluating tools for their team. Which angle fits best?',
+        text: 'How do we handle pagination when a workspace has many budgets?',
       },
       {
         role: 'agent',
         steps: [{
           type: 'text',
           dot: 'gray',
-          html: '<p>Lead with outcome (#1) for EMs — they care about throughput and visibility. Support with a subhead on per-seat pricing and usage caps so finance questions are answered above the fold.</p>',
+          html: '<p>The list endpoint is server-side paginated with <code>cursor</code> and <code>limit</code>. Use an infinite query in the dashboard and render a "Load more" button at the bottom of the grid.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Should cards refetch after a budget update?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes. Invalidate both the single-budget query key and the list query key after a successful mutation so the card and dashboard stay in sync.</p>',
+        }],
+      },
+    ],
+    t8: [
+      {
+        role: 'user',
+        text: 'What shape should the budget alert webhook payload have?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Include <code>event</code>, <code>budgetId</code>, <code>workspaceId</code>, <code>thresholdPercent</code>, <code>currentSpendPercent</code>, and <code>triggeredAt</code>. Keep it flat so consumers can filter easily.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Should clients acknowledge alerts or is fire-and-force enough?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Provide a <code>POST /budgets/:id/alerts/acknowledge</code> endpoint. The backend can then suppress repeat webhooks for the same threshold crossing until spend drops below the threshold again.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'How often are thresholds evaluated?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Every 15 minutes via a scheduled worker. The worker reads the latest spend aggregates and emits events only when a budget crosses from one alert zone to another.</p>',
+        }],
+      },
+    ],
+    t9: [
+      {
+        role: 'user',
+        text: 'Which icon should replace the sliders icon in the sidebar settings item?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Use the Lucide <code>Settings</code> gear icon. It is the standard metaphor and matches the icon used in the account dropdown.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Is the Settings icon available in both light and dark themes?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes. Lucide icons inherit the current text color, so the gear will adapt automatically. No extra theme handling is needed.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Do we need to update any tests for this change?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>The unit test snapshots will update when you change the import. Add a visual regression test so the correct icon is captured in both themes.</p>',
+        }],
+      },
+    ],
+    t10: [
+      {
+        role: 'user',
+        text: 'What is causing the dashboard spend totals discrepancy?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>The header total excludes refunds while the chart series includes them. That causes the two numbers to diverge whenever a refund is applied within the selected period.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Why were refunds excluded from the header total in the first place?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>It was legacy behavior from the first dashboard iteration. The original intent was to show "net spend," but the chart series was never updated to match.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Will fixing this change the API response shape?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>No new fields, but the value of <code>total</code> will increase when refunds exist. Add a note to the changelog so consumers know the aggregate is now consistent with the series.</p>',
+        }],
+      },
+    ],
+    t11: [
+      {
+        role: 'user',
+        text: 'Suggest onboarding copy for the first-run empty state.',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Here are three directions:</p><p><strong>1. Outcome-led:</strong> "Track your team\'s cloud spend before it surprises you."</p><p><strong>2. Action-led:</strong> "Create your first budget to start tracking spend."</p><p><strong>3. Education-led:</strong> "Budgets help you set limits and get alerts before costs spike."</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Which variant works best for self-serve users who skipped the demo?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Use the action-led variant (#2). Self-serve users want the next step immediately. Keep the education copy in a secondary tooltip that appears on hover of the headline.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Should we skip onboarding for workspaces that already have budgets?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes. Gate the empty state and tooltip tour on <code>budgets.length === 0</code>. Existing workspaces should see the normal dashboard without interruption.</p>',
+        }],
+      },
+    ],
+    t12: [
+      {
+        role: 'user',
+        text: 'What is the migration plan for budget categories?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Create a new <code>budget_categories</code> table, add a nullable foreign key on budgets, backfill categories from existing labels, then make the foreign key non-nullable in a follow-up deploy.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Will existing budgets break during the migration?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>No. The category foreign key is nullable in the first migration, and the API continues to return budgets without a category. Seed data will be mapped to an "Uncategorized" label during backfill.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Is the rollback path tested for staging?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes. The migration is wrapped in a transaction and the staging dry run completed successfully. Rollback drops the new table and restores the previous column state.</p>',
+        }],
+      },
+    ],
+    t13: [
+      {
+        role: 'user',
+        text: 'Why replace spinners with skeletons for budget rows?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Skeletons reduce perceived loading time and prevent layout shift because they match the final row dimensions. Spinners draw attention to the wait state instead of the content.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'How many skeleton rows should the list render?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Render four skeleton rows by default. That matches the default page size in the API contract and keeps the container height stable before data arrives.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Should we use the generic Skeleton component or a budget-specific one?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Create a <code>BudgetListSkeleton</code> component that composes the generic <code>Skeleton</code>. That keeps row geometry isolated and reusable across budget views.</p>',
+        }],
+      },
+    ],
+    t14: [
+      {
+        role: 'user',
+        text: 'Which icon is mismatched in the agent picker dropdown?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>The dropdown uses <code>UserRound</code> while the kanban assignee chips use <code>UserCircle2</code>. Replace the picker import with <code>UserCircle2</code> to align both contexts.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Does this affect the dark theme variant only?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>No, both themes show the wrong icon. The mismatch is in the component code, not the theme tokens. The fix is a one-line import and usage swap.</p>',
+        }],
+      },
+      {
+        role: 'user',
+        text: 'Is there a one-click fix we can ship for this?',
+      },
+      {
+        role: 'agent',
+        steps: [{
+          type: 'text',
+          dot: 'gray',
+          html: '<p>Yes. Update <code>src/components/tasks/assignee-picker.tsx</code> to import and render <code>UserCircle2</code>, then run the component tests. The change is safe and self-contained.</p>',
         }],
       },
     ],
@@ -533,6 +1300,11 @@ let activeWorkspaceId = 'kimchi';
 let activeWorkspaceChartTab = 'tasks';
 let activeAppMode = 'chat';
 let designArtifactHtml = null;
+
+const sidebarSectionCollapsed = {
+  design: {},
+  code: {},
+};
 
 const DIRECTORY_SKILLS = [
   { id: 'design-eval', slug: '/nn-group-design-eval', author: 'mike@cast.ai', uses: 4, source: 'shared', desc: 'Evaluates UX designs against NN/g heuristics and accessibility standards.' },
@@ -1786,6 +2558,24 @@ function applyAppModeUi() {
   });
 
   renderAppModeTabBadges();
+  updateSubheaderForAppMode();
+}
+
+function updateSubheaderForAppMode() {
+  const config = getSubheaderModeConfig(activeAppMode);
+
+  const overviewBtn = $('#subheader-overview-btn');
+  if (overviewBtn) overviewBtn.hidden = config.overviewHidden;
+
+  const divider = $('#repo-tabs-divider');
+  if (divider) divider.hidden = config.dividerHidden;
+
+  const allTab = $('#repo-tab-all');
+  if (allTab) allTab.textContent = config.allTabLabel;
+
+  if (activeAppMode === 'chat' && subheaderView === 'overview') {
+    setSubheaderView('project');
+  }
 }
 
 function getTasksForAppMode(mode) {
@@ -2353,7 +3143,7 @@ function groupTasksByProject(taskList) {
 }
 
 function getChatConversationStatus(task) {
-  if (task.chatReviewReason === 'needs-input') return { label: 'Needs input', cls: 'needs-input' };
+  if (task.chatReviewReason === 'needs-input') return { label: 'Needs you', cls: 'needs-input' };
   if (task.chatReviewReason === 'ready') return { label: 'Done', cls: 'done' };
   if (task.draft) return { label: 'Draft', cls: 'backlog' };
   return { label: 'Active', cls: 'in-progress' };
@@ -2372,7 +3162,7 @@ function getChatLastSnippet(task) {
 
 function getDesignConversationStatus(task) {
   const bucket = getSidebarBucket(task, 'design');
-  if (bucket === 'needs-input') return { label: 'Needs input', cls: 'needs-input' };
+  if (bucket === 'needs-input') return { label: 'Needs you', cls: 'needs-input' };
   if (bucket === 'done') return { label: 'Ready', cls: 'done' };
   if (bucket === 'in-progress') return { label: 'In progress', cls: 'in-progress' };
   return { label: 'Archive', cls: 'backlog' };
@@ -2380,7 +3170,7 @@ function getDesignConversationStatus(task) {
 
 function getCodeConversationStatus(task) {
   const bucket = getSidebarBucket(task, 'code');
-  if (bucket === 'needs-input') return { label: 'Needs input', cls: 'needs-input' };
+  if (bucket === 'needs-input') return { label: 'Needs you', cls: 'needs-input' };
   if (bucket === 'done') return { label: 'Ready to merge', cls: 'done' };
   if (bucket === 'in-progress') return { label: 'In progress', cls: 'in-progress' };
   if (bucket === 'active') return { label: 'Backlog', cls: 'backlog' };
@@ -2553,7 +3343,7 @@ function renderProjectOverview() {
 
   let html = '';
   if (activeAppMode === 'chat') {
-    const chats = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+    const chats = tasks.filter((task) => !task.archived && !task.draft);
     const groups = groupTasksByProject(chats);
     html = `<header class="overview-header">
       <h2>Conversations</h2>
@@ -2788,7 +3578,10 @@ function tasksForTaskSidebar() {
   if (activeAppMode === 'code') {
     return list.filter((task) => task.repo !== 'design');
   }
-  return list.filter((task) => task.repo === 'design');
+  if (activeAppMode === 'design') {
+    return list.filter((task) => task.repo === 'design');
+  }
+  return list;
 }
 
 function getSidebarBucket(task, mode = activeAppMode) {
@@ -3465,8 +4258,10 @@ function sidebarTaskLeadingHtml(task) {
     </span>`;
   }
   if (task.status === 'closed') {
-    return `<span class="sidebar-task-icon sidebar-task-icon--pr" aria-hidden="true">
-      ${iconHtml('git-pull-request', { size: 12, className: 'lucide-icon' })}
+    const icon = task.repo === 'design' ? 'check-check' : 'git-pull-request';
+    const modifier = task.repo === 'design' ? 'done' : 'pr';
+    return `<span class="sidebar-task-icon sidebar-task-icon--${modifier}" aria-hidden="true">
+      ${iconHtml(icon, { size: 12, className: 'lucide-icon' })}
     </span>`;
   }
   return '';
@@ -7500,6 +8295,7 @@ function renderTaskSidebar() {
   const mode = activeAppMode === 'code' ? 'code' : 'design';
   const sections = SIDEBAR_SECTIONS[mode];
   const visibleTasks = tasksForTaskSidebar();
+  const isAccordion = true;
 
   const activeTasksHtml = mode === 'code'
     ? visibleTasks
@@ -7512,24 +8308,37 @@ function renderTaskSidebar() {
     .map((section) => {
       const sectionTasks = visibleTasks.filter((task) => getSidebarBucket(task, mode) === section.id);
       const items = sectionTasks.map((task) => sidebarTaskHtml(task)).join('');
+      const isCollapsed = isAccordion && sidebarSectionCollapsed[mode][section.id] === true;
       const archiveBtn = section.showArchiveBtn
         ? `<button type="button" class="sidebar-archive-btn" aria-label="Archive completed tasks">
             ${iconHtml('archive', { size: 12, className: 'lucide-icon' })}
           </button>`
         : '';
+      const chevron = isAccordion
+        ? `<span class="sidebar-section-chevron">
+            ${iconHtml('chevron-down', { size: 12, className: 'lucide-icon' })}
+          </span>`
+        : '';
+      const collapsedClass = isCollapsed ? ' collapsed' : '';
+      const headerAttrs = isAccordion
+        ? ` data-section="${section.id}" data-mode="${mode}" role="button" tabindex="0" aria-expanded="${!isCollapsed}"`
+        : '';
 
       return `
         <div class="sidebar-section">
           <div class="sidebar-section-divider" aria-hidden="true"></div>
-          <div class="sidebar-section-header">
+          <div class="sidebar-section-header${collapsedClass}"${headerAttrs}>
             <span class="sidebar-leading"><span class="status-dot ${section.dot}"></span></span>
             <span class="sidebar-section-label">
               ${section.label}
               <span class="column-count">${sectionTasks.length}</span>
             </span>
-            ${archiveBtn}
+            <span class="sidebar-section-trailing">
+              ${chevron}
+              ${archiveBtn}
+            </span>
           </div>
-          <div class="sidebar-section-body">${items}</div>
+          <div class="sidebar-section-body${collapsedClass}">${items}</div>
         </div>`;
     })
     .join('');
@@ -7573,6 +8382,26 @@ function renderTaskSidebar() {
       archiveCompletedTasks();
     });
   });
+
+  if (isAccordion) {
+    sidebar.querySelectorAll('.sidebar-section-header[data-section]').forEach((header) => {
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.sidebar-archive-btn')) return;
+        toggleSidebarSection(header.dataset.section, header.dataset.mode);
+      });
+      header.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleSidebarSection(header.dataset.section, header.dataset.mode);
+        }
+      });
+    });
+  }
+}
+
+function toggleSidebarSection(sectionId, mode) {
+  sidebarSectionCollapsed[mode][sectionId] = !sidebarSectionCollapsed[mode][sectionId];
+  renderTaskSidebar();
 }
 
 /* ── Rich selects (modal + chat compose) ── */
