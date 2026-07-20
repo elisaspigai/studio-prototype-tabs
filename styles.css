@@ -1884,9 +1884,18 @@ body.is-dragging-card .task-link-arrowhead {
   font-size: 14px;
   font-weight: 600;
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.task-subheader-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .task-subheader-right {
@@ -1894,6 +1903,7 @@ body.is-dragging-card .task-link-arrowhead {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: 12px;
 }
 
 .status-badge {
@@ -4004,6 +4014,59 @@ body.is-dragging-card .task-link-arrowhead {
 .modal-field-label {
   font-size: 12px;
   color: var(--text-muted);
+}
+.modal-field-optional {
+  color: var(--text-muted);
+}
+
+.modal-text-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+.modal-text-input::placeholder { color: var(--text-muted); }
+.modal-text-input:focus { border-color: var(--border); }
+
+.rich-select-value.is-placeholder { color: var(--text-muted); }
+
+.modal-footer-end {
+  justify-content: flex-end;
+}
+
+.new-project-modal .btn-modal-start {
+  border-radius: 8px;
+}
+
+.multi-select-option {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.multi-select-option .checkbox-box {
+  flex-shrink: 0;
+}
+.multi-select-option .rich-select-option-title {
+  flex: 1;
+}
+.multi-select-option.selected .checkbox-box {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+.multi-select-option.selected .checkbox-box::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin: 1px auto 0;
 }
 
 .modal-select-wrap {

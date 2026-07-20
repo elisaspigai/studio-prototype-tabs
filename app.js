@@ -3624,6 +3624,26 @@ const PROJECT_REPOS = {
   hackathon: 'cast-ai/hackathon',
 };
 
+const NEW_PROJECT_SKILL_OPTIONS = DIRECTORY_SKILLS.map((skill) => ({
+  id: skill.id,
+  label: skill.slug,
+  desc: skill.desc,
+}));
+
+const NEW_PROJECT_CONNECTOR_OPTIONS = DIRECTORY_CONNECTORS.map((connector) => ({
+  id: connector.id,
+  label: connector.name,
+  desc: connector.desc,
+}));
+
+function getNewProjectRepositoryOptions() {
+  const repos = new Set(Object.values(PROJECT_REPOS));
+  return [
+    { id: 'none', label: 'None', desc: 'No repository linked' },
+    ...Array.from(repos).sort().map((repo) => ({ id: repo, label: repo, desc: '' })),
+  ];
+}
+
 function projectLabel(projectId) {
   return PROJECT_LABELS[projectId] || projectId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -4179,12 +4199,17 @@ function initProjectEmptyState() {
   });
 }
 
-function addEmptyProject(name) {
-  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `project-${uid().slice(0, 6)}`;
+function addEmptyProject({ name = 'New project', skills = [], connectors = [], repository = 'none' } = {}) {
+  const displayName = name.trim() || 'New project';
+  const slug = displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `project-${uid().slice(0, 6)}`;
   if (PROJECT_LABELS[slug]) return slug;
 
-  PROJECT_LABELS[slug] = name.trim() || 'New project';
-  PROJECT_REPOS[slug] = `cast-ai/${slug}`;
+  PROJECT_LABELS[slug] = displayName;
+  if (repository && repository !== 'none') {
+    PROJECT_REPOS[slug] = repository;
+  } else {
+    PROJECT_REPOS[slug] = `cast-ai/${slug}`;
+  }
 
   const tabs = $('.repo-tabs');
   const addBtn = $('#new-project-btn');
@@ -4201,13 +4226,69 @@ function addEmptyProject(name) {
 
   tabs.insertBefore(tab, addBtn);
   setSubheaderView('project', slug);
-  projectDirectories[slug] = createProjectDirectory();
+  projectDirectories[slug] = createProjectDirectory(skills, connectors);
+  renderDirectoryCounts();
   return slug;
+}
+
+function resetNewProjectModal() {
+  const nameInput = $('#new-project-name');
+  if (nameInput) nameInput.value = '';
+
+  resetMultiSelect($('#new-project-skills-select'), NEW_PROJECT_SKILL_OPTIONS);
+  resetMultiSelect($('#new-project-connectors-select'), NEW_PROJECT_CONNECTOR_OPTIONS);
+  setRichSelectValue($('#new-project-repo-select'), getNewProjectRepositoryOptions(), 'none');
+}
+
+function openNewProjectModal() {
+  const modal = $('#new-project-modal');
+  if (!modal) return;
+
+  resetNewProjectModal();
+  modal.showModal();
+  initIcons(modal);
+  $('#new-project-name')?.focus();
+}
+
+function closeNewProjectModal() {
+  closeRichSelects();
+  $('#new-project-modal')?.close();
+}
+
+function initNewProjectModal() {
+  const modal = $('#new-project-modal');
+  const form = $('#new-project-form');
+  if (!modal || !form || modal.dataset.bound) return;
+  modal.dataset.bound = 'true';
+
+  initMultiSelect($('#new-project-skills-select'), NEW_PROJECT_SKILL_OPTIONS);
+  initMultiSelect($('#new-project-connectors-select'), NEW_PROJECT_CONNECTOR_OPTIONS);
+  initRichSelect($('#new-project-repo-select'), getNewProjectRepositoryOptions());
+
+  $('#new-project-modal-close')?.addEventListener('click', () => closeNewProjectModal());
+  $('#new-project-cancel')?.addEventListener('click', () => closeNewProjectModal());
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeNewProjectModal();
+  });
+
+  modal.addEventListener('close', closeRichSelects);
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('#new-project-name')?.value || '';
+    const skills = getMultiSelectValues($('#new-project-skills-select'));
+    const connectors = getMultiSelectValues($('#new-project-connectors-select'));
+    const repository = $('#new-project-repo-select')?.querySelector('input[type="hidden"]')?.value || 'none';
+
+    addEmptyProject({ name, skills, connectors, repository });
+    closeNewProjectModal();
+  });
 }
 
 function initNewProjectButton() {
   $('#new-project-btn')?.addEventListener('click', () => {
-    addEmptyProject('New project');
+    openNewProjectModal();
   });
 }
 
@@ -4462,6 +4543,35 @@ function mockCommitHash(task, index) {
   return (0x1000000 + seed * 0x10411).toString(16).slice(0, 7);
 }
 
+function getTaskPullRequests(task) {
+  if (!task?.prs) return [];
+
+  const number = taskPrNumber(task);
+  const repo = githubRepoName(task.repo);
+  return [{
+    number,
+    title: taskPrTitle(task),
+    repo,
+    status: task.status === 'closed' ? 'merged' : 'open',
+    url: `https://github.com/kimchi-studio/${repo}/pull/${number}`,
+  }];
+}
+
+function getTaskCommits(task) {
+  if (!task?.commits) return [];
+
+  const repo = githubRepoName(task.repo);
+  return taskCommitMessages(task).map((message, index) => {
+    const hash = mockCommitHash(task, index);
+    return {
+      hash,
+      message,
+      repo,
+      url: `https://github.com/kimchi-studio/${repo}/commit/${hash}`,
+    };
+  });
+}
+
 function getBoardPullRequests() {
   return tasksForBoard()
     .filter((task) => task.prs > 0)
@@ -4546,8 +4656,9 @@ function openWorkspaceStatsMenu(anchor, type) {
   workspaceStatsMenuAnchor = anchor;
   workspaceStatsMenuType = type;
 
+  const task = getTask(activeTaskId);
   if (type === 'prs') {
-    const prs = getBoardPullRequests();
+    const prs = getTaskPullRequests(task);
     menu.innerHTML = `
       <div class="workspace-stats-menu-header">Pull requests</div>
       <div class="workspace-stats-menu-list">
@@ -4570,7 +4681,7 @@ function openWorkspaceStatsMenu(anchor, type) {
         }
       </div>`;
   } else {
-    const commits = getBoardCommits();
+    const commits = getTaskCommits(task);
     menu.innerHTML = `
       <div class="workspace-stats-menu-header">Commits</div>
       <div class="workspace-stats-menu-list">
@@ -4632,39 +4743,74 @@ function initWorkspaceStatsMenus() {
   });
 }
 
-function aggregateBoardStats() {
-  return tasksForBoard().reduce(
-    (totals, task) => ({
-      files: totals.files + (task.files || 0),
-      additions: totals.additions + (task.additions || 0),
-      deletions: totals.deletions + (task.deletions || 0),
-      prs: totals.prs + (task.prs || 0),
-      commits: totals.commits + (task.commits || 0),
-    }),
-    { files: 0, additions: 0, deletions: 0, prs: 0, commits: 0 },
-  );
+function getTaskHeaderStats(task) {
+  if (!task) {
+    return { files: 0, additions: 0, deletions: 0, prs: 0, commits: 0 };
+  }
+
+  return {
+    files: task.files || 0,
+    additions: task.additions || 0,
+    deletions: task.deletions || 0,
+    prs: task.prs || 0,
+    commits: task.commits || 0,
+  };
 }
 
-function renderBoardWorkspaceStats() {
+function taskHasHeaderStats(task) {
+  const stats = getTaskHeaderStats(task);
+  return stats.files > 0 || stats.additions > 0 || stats.deletions > 0 || stats.prs > 0 || stats.commits > 0;
+}
+
+function renderTaskHeaderStats() {
+  const statsWrap = $('#task-subheader-stats');
   const filesEl = $('#board-workspace-files');
   const prsEl = $('#board-workspace-prs');
   const commitsEl = $('#board-workspace-commits');
   if (!filesEl || !prsEl || !commitsEl) return;
 
-  const stats = aggregateBoardStats();
-  const fileLabel = stats.files === 1 ? '1 file' : `${stats.files} files`;
-  filesEl.innerHTML = `${fileLabel} <span class="add">+${stats.additions}</span> <span class="del">−${stats.deletions}</span>`;
+  const task = getTask(activeTaskId);
+  const stats = getTaskHeaderStats(task);
+  const hasAny = taskHasHeaderStats(task);
 
-  const prLabel = stats.prs === 1 ? '1 PR' : `${stats.prs} PRs`;
-  prsEl.innerHTML = `${iconHtml('git-pull-request', { size: 12 })} ${prLabel}`;
+  if (statsWrap) statsWrap.hidden = !hasAny;
+  if (!hasAny) {
+    filesEl.hidden = true;
+    prsEl.hidden = true;
+    commitsEl.hidden = true;
+    closeWorkspaceStatsMenu();
+    return;
+  }
 
-  const commitLabel = stats.commits === 1 ? '1 commit' : `${stats.commits} commits`;
-  commitsEl.innerHTML = `${iconHtml('git-commit', { size: 12 })} ${commitLabel}`;
+  const hasFiles = stats.files > 0 || stats.additions > 0 || stats.deletions > 0;
+  if (hasFiles) {
+    const fileLabel = stats.files === 1 ? '1 file' : `${stats.files} files`;
+    filesEl.innerHTML = `${fileLabel} <span class="add">+${stats.additions}</span> <span class="del">−${stats.deletions}</span>`;
+    filesEl.hidden = false;
+  } else {
+    filesEl.hidden = true;
+  }
+
+  if (stats.prs > 0) {
+    const prLabel = stats.prs === 1 ? '1 PR' : `${stats.prs} PRs`;
+    prsEl.innerHTML = `${iconHtml('git-pull-request', { size: 12 })} ${prLabel}`;
+    prsEl.hidden = false;
+  } else {
+    prsEl.hidden = true;
+  }
+
+  if (stats.commits > 0) {
+    const commitLabel = stats.commits === 1 ? '1 commit' : `${stats.commits} commits`;
+    commitsEl.innerHTML = `${iconHtml('git-commit', { size: 12 })} ${commitLabel}`;
+    commitsEl.hidden = false;
+  } else {
+    commitsEl.hidden = true;
+  }
 }
 
 function renderBoardSubheader() {
   closeWorkspaceStatsMenu();
-  renderBoardWorkspaceStats();
+  renderTaskHeaderStats();
   renderDirectoryCounts();
 }
 
@@ -7221,7 +7367,7 @@ function resumeTaskFromNeedsInput(task) {
 
   renderBoard();
   renderTaskSidebar();
-  renderBoardWorkspaceStats();
+  renderTaskHeaderStats();
 }
 
 async function handleNeedsInputAnswer(task, option, buttonEl) {
@@ -7645,7 +7791,7 @@ function tickInProgressStats() {
     boardStatsChanged = true;
   }
 
-  if (boardStatsChanged) renderBoardWorkspaceStats();
+  if (boardStatsChanged) renderTaskHeaderStats();
 
   if (isTaskWorkComplete(task)) {
     scheduleTaskCompletion(task);
@@ -7790,7 +7936,7 @@ function finishTaskToReview(task) {
 
   renderBoard();
   renderTaskSidebar();
-  renderBoardWorkspaceStats();
+  renderTaskHeaderStats();
   renderAppModeTabBadges();
   if (subheaderView === 'overview') renderProjectOverview();
   showTaskReviewSnackbar(task);
@@ -8468,6 +8614,83 @@ function initRichSelect(wrap, options) {
   });
 }
 
+function setMultiSelectDisplay(wrap, options, selectedIds) {
+  const valueEl = wrap.querySelector('.rich-select-value');
+  const placeholder = wrap.dataset.placeholder || 'Select…';
+  const selected = options.filter((option) => selectedIds.has(option.id));
+
+  if (!selected.length) {
+    valueEl.textContent = placeholder;
+    valueEl.classList.add('is-placeholder');
+    return;
+  }
+
+  valueEl.classList.remove('is-placeholder');
+  valueEl.textContent = selected.length <= 2
+    ? selected.map((option) => option.label).join(', ')
+    : `${selected.length} selected`;
+}
+
+function resetMultiSelect(wrap, options) {
+  if (!wrap) return;
+  wrap._selectedIds = new Set();
+  setMultiSelectDisplay(wrap, options, wrap._selectedIds);
+  wrap.querySelectorAll('.multi-select-option').forEach((btn) => {
+    btn.classList.remove('selected');
+    btn.setAttribute('aria-selected', 'false');
+  });
+}
+
+function getMultiSelectValues(wrap) {
+  return Array.from(wrap?._selectedIds || []);
+}
+
+function initMultiSelect(wrap, options) {
+  if (!wrap) return;
+  wrap._selectedIds = new Set();
+
+  const trigger = wrap.querySelector('.rich-select-trigger');
+  const menu = wrap.querySelector('.rich-select-menu');
+  const placement = wrap.dataset.menuPlacement || 'down';
+
+  menu.classList.toggle('rich-select-menu--up', placement === 'up');
+  menu.classList.toggle('rich-select-menu--down', placement === 'down');
+
+  menu.innerHTML = options.map((opt) => `
+    <button type="button" class="rich-select-option multi-select-option" role="option" data-value="${opt.id}" aria-selected="false">
+      <span class="checkbox-box" aria-hidden="true"></span>
+      <span class="rich-select-option-title">${escapeHtml(opt.label)}</span>
+    </button>`).join('');
+
+  setMultiSelectDisplay(wrap, options, wrap._selectedIds);
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = openRichSelect?.wrap === wrap;
+    closeRichSelects();
+    closeProjectEmptyMenus();
+    if (!isOpen) {
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      openRichSelect = { wrap, trigger, menu };
+    }
+  });
+
+  menu.addEventListener('click', (e) => {
+    const optBtn = e.target.closest('.multi-select-option');
+    if (!optBtn) return;
+
+    const value = optBtn.dataset.value;
+    if (wrap._selectedIds.has(value)) wrap._selectedIds.delete(value);
+    else wrap._selectedIds.add(value);
+
+    const selected = wrap._selectedIds.has(value);
+    optBtn.classList.toggle('selected', selected);
+    optBtn.setAttribute('aria-selected', String(selected));
+    setMultiSelectDisplay(wrap, options, wrap._selectedIds);
+  });
+}
+
 function resetModalSelects() {
   setRichSelectValue($('#permissions-select'), PERMISSION_MODES, 'yolo');
   setRichSelectValue($('#model-select'), MODEL_OPTIONS, 'multi');
@@ -8831,7 +9054,7 @@ function applyModeAttention(task, mode, reviewReason) {
 
   renderBoard();
   renderTaskSidebar();
-  renderBoardWorkspaceStats();
+  renderTaskHeaderStats();
   renderAppModeTabBadges();
   if (subheaderView === 'overview') renderProjectOverview();
 
@@ -8898,6 +9121,7 @@ function init() {
   initProjectEmptyState();
   initProjectEmptyRuntimeMenu();
   initNewProjectButton();
+  initNewProjectModal();
   initSubheaderNav();
   initEvents();
   renderBoardSubheader();

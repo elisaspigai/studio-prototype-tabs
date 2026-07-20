@@ -113,10 +113,6 @@
           <span class="subheader-project-label">Project</span>
           <button type="button" class="subheader-meta-btn" id="subheader-skills-btn">X skills</button>
           <button type="button" class="subheader-meta-btn" id="subheader-connectors-btn">X connectors</button>
-          <span class="subheader-right-divider code-mode-only" aria-hidden="true"></span>
-          <span class="workspace-pill workspace-pill-files code-mode-only" id="board-workspace-files"></span>
-          <button type="button" class="workspace-pill workspace-pill-pr workspace-pill-btn code-mode-only" id="board-workspace-prs" aria-haspopup="menu" aria-expanded="false"></button>
-          <button type="button" class="workspace-pill workspace-pill-commits workspace-pill-btn code-mode-only" id="board-workspace-commits" aria-haspopup="menu" aria-expanded="false"></button>
           <button class="workspace-tool-btn code-mode-only" type="button" aria-label="Settings">
             <span class="icon-slot" data-icon="settings" data-size="14"></span>
           </button>
@@ -129,6 +125,11 @@
         <div class="task-main">
           <div class="task-subheader">
             <h1 class="task-title-header" id="task-detail-title">Implement authentication properly</h1>
+            <div class="task-subheader-stats" id="task-subheader-stats" hidden>
+              <span class="workspace-pill workspace-pill-files" id="board-workspace-files" hidden></span>
+              <button type="button" class="workspace-pill workspace-pill-pr workspace-pill-btn" id="board-workspace-prs" aria-haspopup="menu" aria-expanded="false" hidden></button>
+              <button type="button" class="workspace-pill workspace-pill-commits workspace-pill-btn" id="board-workspace-commits" aria-haspopup="menu" aria-expanded="false" hidden></button>
+            </div>
             <div class="task-subheader-right">
               <span class="status-badge in-progress" id="task-status-badge">In progress</span>
               <button class="icon-btn" aria-label="Settings">
@@ -506,6 +507,65 @@
   </dialog>
 
   <div id="workspace-stats-menu" class="workspace-stats-menu" hidden role="menu"></div>
+
+  <dialog id="new-project-modal" class="modal new-project-modal">
+    <form class="modal-content" id="new-project-form">
+      <div class="modal-header">
+        <h3>New project</h3>
+        <button type="button" class="modal-close" id="new-project-modal-close" aria-label="Close">
+          <span class="icon-slot" data-icon="x" data-size="16"></span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-field">
+          <span class="modal-field-label">Project name</span>
+          <input type="text" class="modal-text-input" id="new-project-name" name="name" placeholder="My project" autocomplete="off" />
+        </div>
+
+        <div class="modal-field">
+          <span class="modal-field-label">Skills <span class="modal-field-optional">· optional</span></span>
+          <div class="modal-select-wrap rich-select-wrap multi-select-wrap" id="new-project-skills-select" data-placeholder="Select skills…" data-menu-placement="down">
+            <button type="button" class="modal-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="rich-select-value is-placeholder">Select skills…</span>
+              <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+            </button>
+            <div class="rich-select-menu" hidden role="listbox" aria-label="Skills"></div>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <span class="modal-field-label">Connectors <span class="modal-field-optional">· optional</span></span>
+          <div class="modal-select-wrap rich-select-wrap multi-select-wrap" id="new-project-connectors-select" data-placeholder="Select connectors…" data-menu-placement="down">
+            <button type="button" class="modal-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="rich-select-value is-placeholder">Select connectors…</span>
+              <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+            </button>
+            <div class="rich-select-menu" hidden role="listbox" aria-label="Connectors"></div>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <span class="modal-field-label">Repository <span class="modal-field-optional">· optional</span></span>
+          <div class="modal-select-wrap rich-select-wrap" id="new-project-repo-select" data-default="none" data-menu-placement="down">
+            <button type="button" class="modal-select rich-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="rich-select-value">None</span>
+              <span class="icon-slot" data-icon="chevron-down" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+            </button>
+            <div class="rich-select-menu" hidden role="listbox" aria-label="Repository"></div>
+            <input type="hidden" name="repository" value="none" />
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer modal-footer-end">
+        <div class="modal-footer-actions">
+          <button type="button" class="btn-modal-create" id="new-project-cancel">Cancel</button>
+          <button type="submit" class="btn-modal-start" id="new-project-create-btn">Create project</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="directory-modal" class="modal directory-modal">
     <div class="directory-modal-content">
