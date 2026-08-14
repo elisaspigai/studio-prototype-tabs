@@ -1,3 +1,23 @@
+/* ── Tailwind (preflight disabled to preserve existing base styles) ── */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-card: var(--bg-card);
+  --color-bg-hover: var(--bg-hover);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent-blue: var(--accent-blue);
+  --font-sans: var(--font-sans);
+}
+
 /* ── Reset & Variables ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -244,6 +264,18 @@ html, body {
 
 #view-task[data-app-mode="chat"] .subheader {
   display: none !important;
+}
+
+#view-task[data-app-mode="design"] .repo-tab-board,
+#view-task[data-app-mode="design"] .repo-tab-tasks,
+#view-task[data-app-mode="design"] #project-filter-dropdown {
+  display: none;
+}
+
+.design-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #view-task[data-app-mode="chat"] .task-subheader-stats,
@@ -525,6 +557,141 @@ html, body {
   color: var(--text-muted);
 }
 .repo-tab.add-repo:hover { color: var(--text-secondary); }
+
+.project-filter-dropdown {
+  position: relative;
+  display: inline-flex;
+  margin-left: 8px;
+}
+
+.project-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 150px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.project-filter-trigger:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.project-filter-trigger[aria-expanded="true"] {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.project-filter-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.project-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  min-width: 200px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#project-filter-menu[hidden] {
+  display: none !important;
+}
+
+.project-filter-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+
+.project-filter-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.project-filter-option.selected {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.project-filter-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--accent-blue);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.project-filter-option.selected .project-filter-check {
+  opacity: 1;
+}
+
+.project-filter-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-subtle);
+}
+
+.project-filter-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.project-filter-new:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
 
 .subheader-right {
   display: flex;
