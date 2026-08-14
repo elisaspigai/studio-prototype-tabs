@@ -1,5 +1,4 @@
 import { iconHtml, initIcons } from './icons.js';
-import { getSubheaderModeConfig } from './app-mode.js';
 
 /* ── Agents ── */
 const STATUS_LABELS = {
@@ -1379,7 +1378,7 @@ function hydrateMockModeChats() {
 hydrateMockModeChats();
 
 let activeTaskId = null;
-let activeRepo = 'all';
+let activeRepo = ['all'];
 let subheaderView = 'project';
 let overviewLayout = 'status'; // 'status' | 'projects' (code/design overview)
 let overviewPreviewTaskId = null;
@@ -1475,12 +1474,12 @@ function getProjectDirectory(projectId) {
 }
 
 function isDirectoryAllProjects() {
-  return activeRepo === 'all';
+  return activeRepo.includes('all');
 }
 
 function getDirectoryScopeLabel() {
   if (isDirectoryAllProjects()) return 'All projects';
-  return projectLabel(activeRepo);
+  return projectLabel(activeRepo[0]);
 }
 
 function getDirectoryModalTitle() {
@@ -1505,12 +1504,12 @@ function getUnionActiveConnectors() {
 
 function getScopedActiveSkills() {
   if (isDirectoryAllProjects()) return getUnionActiveSkills();
-  return getProjectDirectory(activeRepo).activeSkills;
+  return getProjectDirectory(activeRepo[0]).activeSkills;
 }
 
 function getScopedActiveConnectors() {
   if (isDirectoryAllProjects()) return getUnionActiveConnectors();
-  return getProjectDirectory(activeRepo).activeConnectors;
+  return getProjectDirectory(activeRepo[0]).activeConnectors;
 }
 
 function getProjectsUsingSkill(skillId) {
@@ -1523,12 +1522,12 @@ function getProjectsUsingConnector(connectorId) {
 
 function isSkillActiveInScope(skillId) {
   if (isDirectoryAllProjects()) return getProjectsUsingSkill(skillId).length > 0;
-  return getProjectDirectory(activeRepo).activeSkills.has(skillId);
+  return getProjectDirectory(activeRepo[0]).activeSkills.has(skillId);
 }
 
 function isConnectorActiveInScope(connectorId) {
   if (isDirectoryAllProjects()) return getProjectsUsingConnector(connectorId).length > 0;
-  return getProjectDirectory(activeRepo).activeConnectors.has(connectorId);
+  return getProjectDirectory(activeRepo[0]).activeConnectors.has(connectorId);
 }
 
 function directoryProjectsHtml(type, id) {
@@ -2733,24 +2732,13 @@ function applyAppModeUi() {
   });
 
   renderAppModeTabBadges();
-  updateSubheaderForAppMode();
-}
-
-function updateSubheaderForAppMode() {
-  const config = getSubheaderModeConfig(activeAppMode);
-
-  const overviewBtn = $('#subheader-overview-btn');
-  if (overviewBtn) overviewBtn.hidden = config.overviewHidden;
-
-  const divider = $('#repo-tabs-divider');
-  if (divider) divider.hidden = config.dividerHidden;
-
-  const allTab = $('#repo-tab-all');
-  if (allTab) allTab.textContent = config.allTabLabel;
 
   if (activeAppMode === 'chat' && subheaderView === 'overview') {
     setSubheaderView('project');
+    return;
   }
+
+  applySubheaderViewUi();
 }
 
 function getTasksForAppMode(mode) {
@@ -2828,6 +2816,12 @@ function setAppMode(mode, { loadTask = true } = {}) {
   if (nextMode !== activeAppMode) closeOverviewTaskPreview();
   activeAppMode = nextMode;
   localStorage.setItem(APP_MODE_STORAGE_KEY, activeAppMode);
+
+  if (activeAppMode === 'design') {
+    activeRepo = ['all'];
+    updateProjectFilter();
+  }
+
   applyAppModeUi();
   renderBoardSubheader();
   applyProjectEmptyModeUi();
@@ -3393,15 +3387,32 @@ function overviewCodeStatsPillsHtml(stats) {
   return `${filesPill}${prPill}${idlePill}`;
 }
 
-function updateSubheaderTabUi() {
-  $$('.repo-tab:not(.add-repo)').forEach((tab) => {
-    const isOverview = tab.classList.contains('repo-tab-overview');
-    if (isOverview) {
-      tab.classList.toggle('active', subheaderView === 'overview');
-      return;
-    }
-    tab.classList.toggle('active', subheaderView === 'project' && tab.dataset.repo === activeRepo);
+function getProjectFilterLabel() {
+  if (activeRepo.includes('all') || activeRepo.length === 0) return 'All projects';
+  return projectLabel(activeRepo[0]);
+}
+
+function updateProjectFilter() {
+  const menu = $('#project-filter-menu');
+  const label = $('#project-filter-label');
+  if (!menu) return;
+
+  const selected = activeRepo.includes('all') || activeRepo.length === 0 ? 'all' : activeRepo[0];
+  menu.querySelectorAll('.project-filter-option').forEach((option) => {
+    const isSelected = option.dataset.value === selected;
+    option.classList.toggle('selected', isSelected);
+    option.setAttribute('aria-selected', String(isSelected));
   });
+
+  if (label) label.textContent = getProjectFilterLabel();
+}
+
+function updateSubheaderTabUi() {
+  $$('.repo-tab[data-view]').forEach((tab) => {
+    const tabView = tab.dataset.view;
+    tab.classList.toggle('active', subheaderView === tabView);
+  });
+  updateProjectFilter();
 }
 
 function applySubheaderViewUi() {
@@ -3412,13 +3423,16 @@ function applySubheaderViewUi() {
   const panels = $('.task-main-panels');
   const taskSubheader = $('.task-subheader');
   const empty = $('#project-empty-state');
+  const designBackBtn = $('#design-back-btn');
 
   layout?.classList.toggle('is-overview', isOverview);
   taskMain?.classList.toggle('is-overview', isOverview);
   overview?.toggleAttribute('hidden', !isOverview);
   panels?.toggleAttribute('hidden', isOverview);
   taskSubheader?.toggleAttribute('hidden', isOverview);
-
+  if (designBackBtn) {
+    designBackBtn.hidden = !(activeAppMode === 'design' && !isOverview);
+  }
   if (isOverview) {
     empty?.setAttribute('hidden', '');
     taskMain?.classList.remove('is-project-empty');
@@ -3433,8 +3447,8 @@ function setSubheaderView(view, repo = activeRepo, { skipOpenTask = false } = {}
     closeOverviewTaskPreview();
   }
   subheaderView = nextView;
+  activeRepo = repo ? (Array.isArray(repo) ? [...repo] : [repo]) : ['all'];
   if (subheaderView === 'project') {
-    activeRepo = repo || 'all';
     renderDirectoryCounts();
     renderAppModeTabBadges();
     if ($('#directory-modal')?.open) renderDirectoryModal();
@@ -3526,14 +3540,33 @@ function overviewCodeProjectGroupHtml(projectId, projectTasks) {
   </section>`;
 }
 
+function overviewDesignProjectGroupHtml(projectId, projectTasks) {
+  const cards = sortOverviewTasks(
+    projectTasks.filter((task) => !task.archived && !task.draft),
+    'design',
+  )
+    .map(overviewDesignCardHtml)
+    .join('');
+
+  return `<section class="overview-project-group overview-design-project-group">
+    <h3 class="overview-project-name">${escapeHtml(projectLabel(projectId))}</h3>
+    <div class="overview-card-grid">${cards}${overviewCreateCardHtml(projectId)}</div>
+  </section>`;
+}
+
 function overviewTasksForStatusBoard() {
+  let list;
   if (activeAppMode === 'design') {
-    return tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+    list = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+  } else if (activeAppMode === 'chat') {
+    list = tasks.filter((task) => task.repo !== 'design' && !task.archived && !task.draft);
+  } else {
+    list = tasks.filter((task) => task.repo !== 'design' && !task.archived);
   }
-  if (activeAppMode === 'chat') {
-    return tasks.filter((task) => task.repo !== 'design' && !task.archived && !task.draft);
+  if (!activeRepo.includes('all')) {
+    list = list.filter((task) => activeRepo.includes(task.project));
   }
-  return tasks.filter((task) => task.repo !== 'design' && !task.archived);
+  return list;
 }
 
 function overviewStatusKanbanHtml(boardTasks) {
@@ -4679,17 +4712,24 @@ function renderProjectOverview() {
 
   const previewId = overviewPreviewTaskId;
   const overviewRoot = $('#project-overview');
-  // This overview screen is now status-only (no Status/Projects toggle).
   overviewRoot?.classList.add('is-status-layout');
 
-  let boardTasks;
-  if (activeAppMode === 'chat') {
-    boardTasks = tasks.filter((task) => task.repo !== 'design' && !task.archived && !task.draft);
-  } else if (activeAppMode === 'design') {
-    boardTasks = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
-  } else {
-    boardTasks = tasks.filter((task) => task.repo !== 'design' && !task.archived);
+  if (activeAppMode === 'design') {
+    const designTasks = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+    const filteredTasks = activeRepo.includes('all')
+      ? designTasks
+      : designTasks.filter((task) => activeRepo.includes(task.project));
+    const projectIds = [...new Set(filteredTasks.map((task) => task.project))];
+    const groupsHtml = projectIds
+      .map((projectId) => overviewDesignProjectGroupHtml(projectId, filteredTasks.filter((task) => task.project === projectId)))
+      .join('');
+    container.innerHTML = `<div class="overview-project-groups">${groupsHtml}</div>`;
+    initIcons(container);
+    bindProjectOverviewEvents(container);
+    return;
   }
+
+  const boardTasks = overviewTasksForStatusBoard();
 
   container.innerHTML = overviewStatusKanbanHtml(boardTasks);
   initIcons(container);
@@ -4722,17 +4762,60 @@ function bindProjectOverviewEvents(container) {
   });
 }
 
+function initProjectFilterDropdown() {
+  const dropdown = $('#project-filter-dropdown');
+  const trigger = $('#project-filter-trigger');
+  const menu = $('#project-filter-menu');
+  if (!dropdown || !trigger || !menu) return;
+
+  function setOpen(open) {
+    trigger.setAttribute('aria-expanded', String(open));
+    menu.toggleAttribute('hidden', !open);
+    menu.setAttribute('aria-hidden', String(!open));
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+    setOpen(!isOpen);
+  });
+
+  menu.addEventListener('click', (e) => {
+    const option = e.target.closest('.project-filter-option');
+    if (!option) return;
+    const value = option.dataset.value || 'all';
+    setSubheaderView(subheaderView, [value], { skipOpenTask: true });
+    setOpen(false);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target)) setOpen(false);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setOpen(false);
+  });
+}
+
 function initSubheaderNav() {
-  $('#subheader-overview-btn')?.addEventListener('click', () => {
+  $('#subheader-board-btn')?.addEventListener('click', () => {
     closeOverviewTaskPreview();
     setSubheaderView('overview');
   });
 
-  $$('.repo-tab:not(.add-repo):not(.repo-tab-overview)').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      setSubheaderView('project', tab.dataset.repo || 'all');
-    });
+  $('#subheader-tasks-btn')?.addEventListener('click', () => {
+    closeOverviewTaskPreview();
+    setSubheaderView('project');
   });
+
+  $('#design-back-btn')?.addEventListener('click', () => {
+    closeOverviewTaskPreview();
+    activeRepo = ['all'];
+    updateProjectFilter();
+    setSubheaderView('overview');
+  });
+
+  initProjectFilterDropdown();
 }
 
 async function buildDesignPrototypeHtml(prompt, taskId = null) {
@@ -4855,8 +4938,8 @@ function boardTasks() {
 }
 
 function tasksForProject(list) {
-  if (activeRepo === 'all') return list;
-  return list.filter((task) => task.project === activeRepo);
+  if (activeRepo.includes('all')) return list;
+  return list.filter((task) => activeRepo.includes(task.project));
 }
 
 function tasksForBoardRepo() {
@@ -4903,7 +4986,7 @@ function defaultRepoForNewTask() {
 }
 
 function defaultProjectForNewTask() {
-  return activeRepo === 'all' ? 'kimchi' : activeRepo;
+  return activeRepo.includes('all') || activeRepo.length === 0 ? 'kimchi' : activeRepo[0];
 }
 
 const PROJECT_LABELS = {
@@ -5295,9 +5378,9 @@ function updateProjectEmptyState() {
       syncProjectEmptySelects(getTask(activeTaskId));
       const label = $('#project-empty-project-label');
       if (label) {
-        label.textContent = activeRepo === 'all'
+        label.textContent = activeRepo.includes('all') || activeRepo.length === 0
           ? 'studio-prototype'
-          : projectLabel(activeRepo);
+          : projectLabel(activeRepo[0]);
       }
       initIcons(emptyEl);
     }
@@ -5511,22 +5594,21 @@ function addEmptyProject({ name = 'New project', skills = [], connectors = [], r
     PROJECT_REPOS[slug] = `cast-ai/${slug}`;
   }
 
-  const tabs = $('.repo-tabs');
-  const addBtn = $('#new-project-btn');
-  if (!tabs || !addBtn) return slug;
+  const menu = $('#project-filter-menu');
+  const divider = menu?.querySelector('.project-filter-divider');
+  if (menu && divider) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'project-filter-option';
+    btn.setAttribute('role', 'option');
+    btn.setAttribute('aria-selected', 'false');
+    btn.dataset.value = slug;
+    btn.innerHTML = `<span>${escapeHtml(PROJECT_LABELS[slug])}</span><span class="project-filter-check" aria-hidden="true"><span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon"></span></span>`;
+    menu.insertBefore(btn, divider);
+  }
 
-  const tab = document.createElement('button');
-  tab.type = 'button';
-  tab.className = 'repo-tab';
-  tab.dataset.repo = slug;
-  tab.textContent = PROJECT_LABELS[slug];
-  tab.addEventListener('click', () => {
-    setSubheaderView('project', slug);
-  });
-
-  tabs.insertBefore(tab, addBtn);
-  setSubheaderView('project', slug);
   projectDirectories[slug] = createProjectDirectory(skills, connectors);
+  setSubheaderView('project', [slug]);
   renderDirectoryCounts();
   return slug;
 }
@@ -5588,6 +5670,13 @@ function initNewProjectModal() {
 
 function initNewProjectButton() {
   $('#new-project-btn')?.addEventListener('click', () => {
+    const trigger = $('#project-filter-trigger');
+    const menu = $('#project-filter-menu');
+    if (trigger && menu) {
+      trigger.setAttribute('aria-expanded', 'false');
+      menu.setAttribute('hidden', '');
+      menu.setAttribute('aria-hidden', 'true');
+    }
     openNewProjectModal();
   });
 }
@@ -6397,7 +6486,7 @@ function renderDirectoryModal() {
 function toggleDirectoryItem(type, id) {
   if (isDirectoryAllProjects()) return;
 
-  const dir = getProjectDirectory(activeRepo);
+  const dir = getProjectDirectory(activeRepo[0]);
   const set = type === 'skill' ? dir.activeSkills : dir.activeConnectors;
 
   if (set.has(id)) set.delete(id);
@@ -7185,11 +7274,8 @@ function openWorkspace(workspaceId) {
   if (!workspace) return;
 
   activeWorkspaceId = workspace.id;
-  activeRepo = 'all';
-
-  $$('.repo-tab').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.repo === 'all');
-  });
+  activeRepo = ['all'];
+  updateProjectFilter();
 
   const defaultTaskId = getDefaultTaskId();
   if (defaultTaskId) openTaskDetail(defaultTaskId);
@@ -7400,7 +7486,7 @@ function renderTaskLinks() {
 
   layer.replaceChildren();
 
-  if (activeRepo !== 'all') {
+  if (!activeRepo.includes('all')) {
     layer.hidden = true;
     return;
   }

@@ -98,16 +98,49 @@
 
       <div class="subheader">
         <div class="repo-tabs">
-          <button type="button" class="repo-tab repo-tab-overview" id="subheader-overview-btn" data-repo="overview">Overview</button>
-          <span class="repo-tabs-divider" id="repo-tabs-divider" aria-hidden="true"></span>
-          <button class="repo-tab active" id="repo-tab-all" data-repo="all">All projects</button>
-          <button class="repo-tab" data-repo="kimchi">Kimchi</button>
-          <button class="repo-tab" data-repo="one-click">One-click</button>
-          <button class="repo-tab" data-repo="hackathon">Hackathon</button>
-          <button class="repo-tab add-repo" type="button" id="new-project-btn">
-            <span class="icon-slot" data-icon="plus" data-size="12" data-icon-class="lucide-icon"></span>
-            New project
+          <button type="button" class="repo-tab repo-tab-board" id="subheader-board-btn" data-view="overview">Board</button>
+          <button type="button" class="repo-tab repo-tab-tasks" id="subheader-tasks-btn" data-view="project">Tasks</button>
+          <button type="button" class="repo-tab design-back-btn" id="design-back-btn" hidden>
+            <span class="icon-slot" data-icon="chevron-left" data-size="14" data-icon-class="lucide-icon"></span>
+            Projects
           </button>
+          <div class="project-filter-dropdown" id="project-filter-dropdown">
+            <button type="button" class="project-filter-trigger" id="project-filter-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="project-filter-label" id="project-filter-label">All projects</span>
+              <span class="icon-slot" data-icon="chevron-down" data-size="14" data-icon-class="lucide-icon"></span>
+            </button>
+            <div class="project-filter-menu" id="project-filter-menu" role="listbox" aria-hidden="true" hidden>
+              <button type="button" class="project-filter-option" role="option" data-value="all" aria-selected="true">
+                <span>All projects</span>
+                <span class="project-filter-check" aria-hidden="true">
+                  <span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon"></span>
+                </span>
+              </button>
+              <button type="button" class="project-filter-option" role="option" data-value="kimchi" aria-selected="false">
+                <span>Kimchi</span>
+                <span class="project-filter-check" aria-hidden="true">
+                  <span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon"></span>
+                </span>
+              </button>
+              <button type="button" class="project-filter-option" role="option" data-value="one-click" aria-selected="false">
+                <span>One-click</span>
+                <span class="project-filter-check" aria-hidden="true">
+                  <span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon"></span>
+                </span>
+              </button>
+              <button type="button" class="project-filter-option" role="option" data-value="hackathon" aria-selected="false">
+                <span>Hackathon</span>
+                <span class="project-filter-check" aria-hidden="true">
+                  <span class="icon-slot" data-icon="check" data-size="14" data-icon-class="lucide-icon"></span>
+                </span>
+              </button>
+              <div class="project-filter-divider" aria-hidden="true"></div>
+              <button type="button" class="project-filter-new" id="new-project-btn">
+                <span class="icon-slot" data-icon="plus" data-size="14" data-icon-class="lucide-icon"></span>
+                New project
+              </button>
+            </div>
+          </div>
         </div>
         <div class="subheader-right">
           <span class="subheader-project-label">Project</span>
