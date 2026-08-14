@@ -6,6 +6,7 @@ const STATUS_LABELS = {
   backlog: 'Backlog',
   'in-progress': 'In progress',
   review: 'Review',
+  'pr-review': 'Review',
   closed: 'Closed',
 };
 
@@ -39,25 +40,56 @@ const REVIEW_REASONS = {
   },
   ready: {
     icon: 'check-check',
-    cardLabel: 'Agent is done',
+    cardLabel: 'Idle',
     iconClass: 'lucide-teal',
     snackbarMessage: 'Review finished task',
   },
+  comments: {
+    icon: 'message-circle',
+    cardLabel: 'Comments',
+    iconClass: 'lucide-orange',
+    snackbarMessage: 'Unresolved PR comments',
+  },
+  'ci-failed': {
+    icon: 'x',
+    cardLabel: 'CI failed',
+    iconClass: 'lucide-orange',
+    snackbarMessage: 'Pipeline failed',
+  },
+  'merge-ready': {
+    icon: 'git-pull-request',
+    cardLabel: 'Merge ready',
+    iconClass: 'lucide-teal',
+    snackbarMessage: 'PR ready to merge',
+  },
+};
+
+const AGENT_REVIEW_REASONS = new Set(['needs-input', 'ready']);
+const PR_REVIEW_REASONS = new Set(['comments', 'ci-failed', 'merge-ready']);
+const OVERVIEW_STATUS_COLUMNS = ['in-progress', 'review', 'pr-review', 'closed'];
+const OVERVIEW_COLUMN_LABELS = {
+  'in-progress': 'In progress',
+  review: 'Needs you / Idle',
+  'pr-review': 'Review',
+  closed: 'Merged',
 };
 
 const SIDEBAR_SECTIONS = {
   design: [
     { id: 'needs-input', label: 'Needs you', dot: 'needs-input' },
     { id: 'in-progress', label: 'In progress', dot: 'in-progress' },
-    { id: 'done', label: 'Open', dot: 'done' },
-    { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
+    { id: 'done', label: 'Open', dot: 'done', showArchiveBtn: true },
+    { id: 'archive', label: 'Archive', icon: 'archive' },
   ],
   code: [
     { id: 'needs-input', label: 'Needs you', dot: 'needs-input' },
     { id: 'in-progress', label: 'In progress', dot: 'in-progress' },
     { id: 'done', label: 'Done', dot: 'done' },
-    { id: 'merged', label: 'Merged', dot: 'merged' },
-    { id: 'archive', label: 'Archive', dot: 'archive', showArchiveBtn: true },
+    { id: 'merged', label: 'Merged', dot: 'merged', showArchiveBtn: true },
+    { id: 'archive', label: 'Archive', icon: 'archive' },
+  ],
+  chat: [
+    { id: 'archive', label: 'Archive', icon: 'archive' },
   ],
 };
 
@@ -80,8 +112,8 @@ let tasks = [
     id: 't2',
     title: 'Implement budgets CRUD API',
     repo: 'backend',
-    status: 'review',
-    reviewReason: 'needs-input',
+    status: 'pr-review',
+    reviewReason: 'comments',
     prs: 1,
     commits: 1,
     files: 4,
@@ -96,10 +128,10 @@ let tasks = [
     repo: 'frontend',
     status: 'in-progress',
     prs: 0,
-    commits: 0,
-    files: 0,
-    additions: 0,
-    deletions: 0,
+    commits: 3,
+    files: 6,
+    additions: 142,
+    deletions: 18,
     chat: [],
   },
   {
@@ -108,7 +140,7 @@ let tasks = [
     repo: 'frontend',
     status: 'review',
     reviewReason: 'needs-input',
-    prs: 1,
+    prs: 0,
     commits: 2,
     files: 4,
     additions: 86,
@@ -119,8 +151,8 @@ let tasks = [
     id: 't5',
     title: 'Publish budgets OpenAPI contract',
     repo: 'backend',
-    status: 'review',
-    reviewReason: 'ready',
+    status: 'pr-review',
+    reviewReason: 'ci-failed',
     prs: 1,
     commits: 1,
     files: 2,
@@ -145,12 +177,13 @@ let tasks = [
     id: 't7',
     title: 'Wire budget cards to API contracts',
     repo: 'frontend',
-    status: 'in-progress',
-    prs: 0,
-    commits: 0,
-    files: 0,
-    additions: 0,
-    deletions: 0,
+    status: 'pr-review',
+    reviewReason: 'merge-ready',
+    prs: 1,
+    commits: 2,
+    files: 3,
+    additions: 58,
+    deletions: 9,
     chat: [],
   },
   {
@@ -159,22 +192,23 @@ let tasks = [
     repo: 'backend',
     status: 'in-progress',
     prs: 0,
-    commits: 0,
-    files: 0,
-    additions: 0,
-    deletions: 0,
+    commits: 1,
+    files: 2,
+    additions: 37,
+    deletions: 4,
     chat: [],
   },
   {
     id: 't9',
     title: 'Fix incorrect settings icon in sidebar',
     repo: 'frontend',
-    status: 'in-progress',
+    status: 'review',
+    reviewReason: 'ready',
     prs: 0,
-    commits: 0,
-    files: 0,
-    additions: 0,
-    deletions: 0,
+    commits: 1,
+    files: 1,
+    additions: 1,
+    deletions: 1,
     chat: [],
   },
   {
@@ -264,11 +298,62 @@ const TASK_PROJECTS = {
   t14: 'one-click',
 };
 
+// Most tasks get their own worktree. Two same-column pairs demo the grouping UI.
+const TASK_WORKTREES = {
+  t1: 'worktree-3',
+  t2: 'worktree-1', // pair with t7 (Review column)
+  t3: 'worktree-4',
+  t4: 'worktree-5',
+  t5: 'worktree-6',
+  t6: 'worktree-7',
+  t7: 'worktree-1', // pair with t2 (Review column)
+  t8: 'worktree-2', // pair with t10 (In progress)
+  t9: 'worktree-8',
+  t10: 'worktree-2', // pair with t8 (In progress)
+  t11: 'worktree-9',
+  t12: 'worktree-10',
+  t13: 'worktree-11',
+  t14: 'worktree-12',
+};
+
 tasks.forEach((task) => {
   if (!task.description) {
     task.description = TASK_DESCRIPTIONS[task.id] || task.title;
   }
   task.project = TASK_PROJECTS[task.id] || 'kimchi';
+  task.worktree = TASK_WORKTREES[task.id] || `worktree-${task.id}`;
+});
+
+const TASK_ARCHIVED = {
+  t11: { prGitStatus: 'Merged' },
+  t13: { prGitStatus: 'Merged' },
+  t14: { prGitStatus: 'Closed' },
+};
+
+const TASK_ARCHIVE_SUMMARIES = {
+  t11: [
+    'Shipped first-run empty states for workspaces with no budgets',
+    'Added create-budget CTA and illustration placeholders',
+    'Aligned onboarding copy with design handoff',
+  ],
+  t13: [
+    'Replaced spinner fallbacks with row-height skeletons',
+    'Matched column layout from the design prototype',
+    'Verified loading states across light and dark themes',
+  ],
+  t14: [
+    'Fixed avatar chip icon mismatch in agent picker',
+    'Aligned theme variant with kanban card icon set',
+    'PR closed without merge after picking up in a follow-up task',
+  ],
+};
+
+tasks.forEach((task) => {
+  const archiveMeta = TASK_ARCHIVED[task.id];
+  if (!archiveMeta) return;
+  task.archived = true;
+  task.archivePrGitStatus = archiveMeta.prGitStatus;
+  task.archiveSummary = TASK_ARCHIVE_SUMMARIES[task.id] || [];
 });
 
 const TASK_BLOCKED_BY = {
@@ -1296,14 +1381,34 @@ hydrateMockModeChats();
 let activeTaskId = null;
 let activeRepo = 'all';
 let subheaderView = 'project';
+let overviewLayout = 'status'; // 'status' | 'projects' (code/design overview)
+let overviewPreviewTaskId = null;
+let overviewPreviewCloseTimer = null;
+let overviewKanbanCompressed = false;
+let overviewArchiveOpen = false;
+let overviewArchiveQuery = '';
+let overviewPreviewColumnWidths = null;
+const OVERVIEW_PREVIEW_ANIM_MS = 400;
+const OVERVIEW_KANBAN_COMPRESSED_WIDTH = 48;
+const OVERVIEW_PREVIEW_CHAT_MIN = 220;
+const OVERVIEW_PREVIEW_WORK_MIN = 320;
+const OVERVIEW_PREVIEW_CHAT_WIDTH_KEY = 'studio-overview-preview-chat-width';
+const OVERVIEW_KANBAN_FOCUS_MIN = 200;
+const OVERVIEW_PREVIEW_PANEL_MIN = 480;
+const OVERVIEW_KANBAN_FOCUS_WIDTH_KEY = 'studio-overview-kanban-focus-width';
+const modeOpenedOnce = {
+  design: false,
+  code: false,
+};
 let activeWorkspaceId = 'kimchi';
 let activeWorkspaceChartTab = 'tasks';
 let activeAppMode = 'chat';
 let designArtifactHtml = null;
 
 const sidebarSectionCollapsed = {
-  design: {},
-  code: {},
+  chat: { archive: true },
+  design: { archive: true },
+  code: { archive: true },
 };
 
 const DIRECTORY_SKILLS = [
@@ -2199,18 +2304,88 @@ function getDiffCommits(bundle, task) {
   }));
 }
 
-function renderDiffLines(lines) {
-  return lines
-    .map((line) => {
-      if (line.type === 'collapse') {
-        return `<div class="diff-collapse">Show ${line.count} unmodified lines</div>`;
-      }
-      return `<div class="diff-line ${line.type}">
-      <span class="ln">${line.ln}</span>
-      <span class="code">${escapeHtml(line.code)}</span>
+function pairUnifiedDiffLines(lines) {
+  const rows = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (line.type === 'collapse') {
+      rows.push({ kind: 'collapse', count: line.count });
+      i += 1;
+      continue;
+    }
+
+    if (line.type === 'ctx') {
+      rows.push({ kind: 'pair', left: line, right: line });
+      i += 1;
+      continue;
+    }
+
+    const dels = [];
+    const adds = [];
+    while (i < lines.length && lines[i].type === 'del') {
+      dels.push(lines[i]);
+      i += 1;
+    }
+    while (i < lines.length && lines[i].type === 'add') {
+      adds.push(lines[i]);
+      i += 1;
+    }
+
+    const count = Math.max(dels.length, adds.length);
+    for (let j = 0; j < count; j += 1) {
+      rows.push({
+        kind: 'pair',
+        left: dels[j] || null,
+        right: adds[j] || null,
+      });
+    }
+  }
+
+  return rows;
+}
+
+function renderDiffSplitCell(line) {
+  if (!line) {
+    return `<div class="diff-split-cell is-empty" aria-hidden="true">
+      <span class="ln"></span>
+      <span class="sign"></span>
+      <span class="code"></span>
     </div>`;
-    })
-    .join('');
+  }
+
+  const type = line.type === 'ctx' ? 'ctx' : line.type;
+  const sign = type === 'add' ? '+' : type === 'del' ? '−' : '';
+  return `<div class="diff-split-cell ${type}">
+    <span class="ln">${line.ln ?? ''}</span>
+    <span class="sign">${sign}</span>
+    <span class="code">${escapeHtml(line.code)}</span>
+  </div>`;
+}
+
+function renderDiffLines(lines) {
+  const rows = pairUnifiedDiffLines(lines || []);
+  return `<div class="diff-split">${rows.map((row) => {
+    if (row.kind === 'collapse') {
+      return `<div class="diff-collapse">Show ${row.count} unmodified lines</div>`;
+    }
+    return `<div class="diff-split-row">
+      ${renderDiffSplitCell(row.left)}
+      ${renderDiffSplitCell(row.right)}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderDiffFileHtml(file) {
+  if (!file) return '';
+  return `<div class="diff-split-wrap">
+    <div class="diff-split-header">
+      <span class="diff-split-path">${escapeHtml(file.path)}</span>
+    </div>
+    ${renderDiffLines(file.lines || [])}
+  </div>`;
 }
 
 function getBranchChangesSelection(bundle, commits) {
@@ -2457,7 +2632,7 @@ function renderDiff() {
     });
   });
 
-  viewer.innerHTML = renderDiffLines(files[safeIndex]?.lines || []);
+  viewer.innerHTML = renderDiffFileHtml(files[safeIndex]);
   if (terminal) terminal.textContent = bundle.terminal;
   renderBrowserPreview();
 }
@@ -2649,11 +2824,21 @@ function normalizeAppMode(mode) {
 }
 
 function setAppMode(mode, { loadTask = true } = {}) {
-  activeAppMode = normalizeAppMode(mode);
+  const nextMode = normalizeAppMode(mode);
+  if (nextMode !== activeAppMode) closeOverviewTaskPreview();
+  activeAppMode = nextMode;
   localStorage.setItem(APP_MODE_STORAGE_KEY, activeAppMode);
   applyAppModeUi();
   renderBoardSubheader();
   applyProjectEmptyModeUi();
+
+  if ((activeAppMode === 'design' || activeAppMode === 'code') && !modeOpenedOnce[activeAppMode]) {
+    modeOpenedOnce[activeAppMode] = true;
+    if (loadTask) {
+      setSubheaderView('overview');
+      return;
+    }
+  }
 
   if (subheaderView === 'overview') {
     applySubheaderViewUi();
@@ -3243,7 +3428,11 @@ function applySubheaderViewUi() {
 }
 
 function setSubheaderView(view, repo = activeRepo, { skipOpenTask = false } = {}) {
-  subheaderView = view === 'overview' ? 'overview' : 'project';
+  const nextView = view === 'overview' ? 'overview' : 'project';
+  if (nextView !== 'overview' || overviewLayout !== 'status') {
+    closeOverviewTaskPreview();
+  }
+  subheaderView = nextView;
   if (subheaderView === 'project') {
     activeRepo = repo || 'all';
     renderDirectoryCounts();
@@ -3337,74 +3526,1178 @@ function overviewCodeProjectGroupHtml(projectId, projectTasks) {
   </section>`;
 }
 
+function overviewTasksForStatusBoard() {
+  if (activeAppMode === 'design') {
+    return tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
+  }
+  if (activeAppMode === 'chat') {
+    return tasks.filter((task) => task.repo !== 'design' && !task.archived && !task.draft);
+  }
+  return tasks.filter((task) => task.repo !== 'design' && !task.archived);
+}
+
+function overviewStatusKanbanHtml(boardTasks) {
+  const columns = OVERVIEW_STATUS_COLUMNS;
+  const columnsHtml = columns.map((status) => {
+    const count = boardTasks.filter((task) => task.status === status).length;
+    const archiveBtn = status === 'closed'
+      ? `<button type="button" class="overview-archive-toggle" id="overview-archive-toggle" aria-expanded="false" aria-controls="overview-archive-panel">
+          <span class="icon-slot" data-icon="archive" data-size="12" data-icon-class="lucide-icon"></span>
+          <span>Archive</span>
+          <span class="overview-archive-count" id="overview-archive-count">0</span>
+        </button>`
+      : '';
+    return `<div class="kanban-column" data-status="${status}">
+      <div class="column-header">
+        <div class="overview-column-breadcrumb">
+          <button type="button" class="breadcrumb-link overview-back-to-board">
+            ${iconHtml('chevron-left', { size: 14, className: 'lucide-icon' })}
+            Overview
+          </button>
+          <span class="breadcrumb-sep">/</span>
+        </div>
+        <span class="status-dot ${status}"></span>
+        <span class="column-title">${OVERVIEW_COLUMN_LABELS[status]}</span>
+        <span class="column-count" data-count="${status}">${count}</span>
+        <div class="column-header-trailing">
+          ${archiveBtn}
+          <button type="button" class="column-header-action overview-column-toggle" hidden aria-label="Compress column" aria-expanded="true">
+            <span class="icon-slot overview-column-toggle-icon" data-icon="panel-left-close" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+          </button>
+        </div>
+      </div>
+      <div class="column-body" data-drop="${status}"></div>
+    </div>`;
+  }).join('');
+
+  return `<div class="overview-board-shell" id="overview-board-shell">
+  <div class="overview-status-stage" id="overview-status-stage">
+    <div class="kanban-board-wrap overview-kanban-wrap">
+      <div class="kanban-board" id="overview-kanban-board">${columnsHtml}</div>
+    </div>
+    <div
+      class="overview-stage-column-resizer overview-panel-resizer"
+      id="overview-stage-column-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize status column and task preview"
+      tabindex="0"
+      hidden
+    ></div>
+    <aside class="overview-task-preview" id="overview-task-preview" aria-hidden="true">
+      <div class="overview-task-preview-inner">
+        <header class="overview-task-preview-header">
+          <div class="overview-task-preview-heading">
+            <h3 class="overview-task-preview-title" id="overview-task-preview-title"></h3>
+            <div class="overview-task-preview-meta">
+              <span class="status-badge" id="overview-task-preview-status"></span>
+              <span class="overview-task-preview-project" id="overview-task-preview-project"></span>
+            </div>
+          </div>
+          <button type="button" class="icon-btn overview-task-preview-close" id="overview-task-preview-close" aria-label="Close preview">
+            ${iconHtml('x', { size: 16, className: 'lucide-icon' })}
+          </button>
+        </header>
+        <div class="overview-task-preview-columns" id="overview-task-preview-columns">
+          <div class="overview-task-preview-chat-col">
+            <div class="chat-messages overview-task-preview-chat" id="overview-task-preview-chat"></div>
+          </div>
+          <div
+            class="overview-preview-column-resizer overview-panel-resizer"
+            id="overview-preview-column-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize chat and code panels"
+            tabindex="0"
+          ></div>
+          <div class="overview-task-preview-work-col" id="overview-task-preview-work">
+            <div class="overview-work-tabs" role="tablist" aria-label="Review panels">
+              <button type="button" class="overview-work-tab active" data-pane="changes" role="tab" aria-selected="true">Changes</button>
+              <button type="button" class="overview-work-tab" data-pane="terminal" role="tab" aria-selected="false">Terminal</button>
+              <button type="button" class="overview-work-tab" data-pane="browser" role="tab" aria-selected="false">Browser</button>
+            </div>
+
+            <div class="overview-work-content">
+              <div class="overview-work-pane active" data-pane="changes">
+                <div class="changes-pane overview-work-changes-pane">
+                  <div class="changes-body">
+                    <div class="file-tree" id="overview-diff-file-tree"></div>
+                    <div class="diff-viewer" id="overview-diff-viewer"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="overview-work-pane" data-pane="terminal">
+                <div class="terminal-pane">
+                  <pre class="terminal-output overview-terminal-output" id="overview-task-terminal-output"></pre>
+                </div>
+              </div>
+
+              <div class="overview-work-pane" data-pane="browser">
+                <div class="browser-pane">
+                  <div class="browser-toolbar" id="overview-browser-toolbar">
+                    <button type="button" class="browser-toolbar-btn" id="overview-browser-refresh" title="Refresh preview" aria-label="Refresh preview">
+                      <span class="icon-slot" data-icon="refresh-cw" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                    </button>
+                    <div class="browser-url-bar">
+                      <span class="icon-slot" data-icon="globe" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+                      <span class="browser-url" id="overview-browser-preview-url"></span>
+                    </div>
+                    <button type="button" class="browser-toolbar-btn" id="overview-browser-open-external" title="Open in browser" aria-label="Open in browser">
+                      <span class="icon-slot" data-icon="external-link" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                    </button>
+                  </div>
+                  <div class="browser-frame-wrap">
+                    <iframe id="overview-browser-preview-frame" class="browser-frame" title="Live preview" sandbox="allow-scripts allow-same-origin"></iframe>
+                    <div class="browser-empty" id="overview-browser-preview-empty" hidden>
+                      <span class="icon-slot" data-icon="globe" data-size="28" data-icon-class="lucide-icon lucide-muted"></span>
+                      <p>Start the task to see a live preview.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <aside class="overview-archive-panel" id="overview-archive-panel" aria-hidden="true">
+    <div class="overview-archive-panel-inner">
+      <header class="overview-archive-panel-header">
+        <div class="overview-archive-heading">
+          <span class="icon-slot" data-icon="archive" data-size="16" data-icon-class="lucide-icon"></span>
+          <h3>Archive</h3>
+          <span class="overview-archive-count" id="overview-archive-panel-count">0</span>
+        </div>
+        <button type="button" class="icon-btn" id="overview-archive-close" aria-label="Close archive">
+          ${iconHtml('x', { size: 16, className: 'lucide-icon' })}
+        </button>
+      </header>
+      <div class="overview-archive-search">
+        <span class="icon-slot" data-icon="search" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+        <input type="search" id="overview-archive-search" placeholder="Search archived tasks…" autocomplete="off" />
+      </div>
+      <div class="overview-archive-table-wrap">
+        <table class="overview-archive-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Edits</th>
+              <th>PR / Git</th>
+              <th>Summary</th>
+            </tr>
+          </thead>
+          <tbody id="overview-archive-table-body"></tbody>
+        </table>
+        <p class="overview-archive-empty" id="overview-archive-empty" hidden>No archived tasks match your search.</p>
+      </div>
+    </div>
+  </aside>
+</div>`;
+}
+
+function initOverviewStageColumnResizer(stage) {
+  if (!stage || stage.dataset.stageResizerBound) return;
+  stage.dataset.stageResizerBound = 'true';
+
+  const resizer = stage.querySelector('#overview-stage-column-resizer');
+  if (!resizer) return;
+
+  const storedWidth = localStorage.getItem(OVERVIEW_KANBAN_FOCUS_WIDTH_KEY);
+  if (storedWidth && !overviewKanbanCompressed) {
+    stage.style.setProperty('--overview-focus-col-width', `${storedWidth}px`);
+  }
+
+  const clampKanbanWidth = (width) => {
+    const resizerWidth = resizer.offsetWidth || 10;
+    const maxKanban = stage.clientWidth - OVERVIEW_PREVIEW_PANEL_MIN - resizerWidth;
+    return Math.round(Math.max(OVERVIEW_KANBAN_FOCUS_MIN, Math.min(maxKanban, width)));
+  };
+
+  const applyKanbanWidth = (width) => {
+    const next = clampKanbanWidth(width);
+    stage.style.setProperty('--overview-focus-col-width', `${next}px`);
+
+    const focusCol = stage.querySelector('.kanban-column.is-preview-focus');
+    if (focusCol && !overviewKanbanCompressed) {
+      focusCol.style.flex = `0 0 ${next}px`;
+      focusCol.style.width = `${next}px`;
+      focusCol.style.minWidth = `${next}px`;
+      focusCol.style.maxWidth = `${next}px`;
+
+      const columns = [...stage.querySelectorAll('.kanban-column')];
+      const focusIndex = columns.indexOf(focusCol);
+      if (focusIndex >= 0 && overviewPreviewColumnWidths?.length === columns.length) {
+        overviewPreviewColumnWidths[focusIndex] = next;
+      }
+    }
+    return next;
+  };
+
+  const persistKanbanWidth = () => {
+    const width = Number.parseFloat(stage.style.getPropertyValue('--overview-focus-col-width'));
+    if (width) localStorage.setItem(OVERVIEW_KANBAN_FOCUS_WIDTH_KEY, String(Math.round(width)));
+  };
+
+  resizer.addEventListener('mousedown', (e) => {
+    if (!stage.classList.contains('is-preview-open')) return;
+    e.preventDefault();
+
+    const startX = e.clientX;
+    const startWidth = Number.parseFloat(getComputedStyle(stage).getPropertyValue('--overview-focus-col-width'))
+      || stage.querySelector('.kanban-column.is-preview-focus')?.getBoundingClientRect().width
+      || 280;
+
+    if (overviewKanbanCompressed) {
+      setOverviewKanbanCompressed(false);
+    }
+
+    resizer.classList.add('is-dragging');
+    stage.classList.add('is-resizing-stage-column');
+    document.body.classList.add('is-resizing-overview-preview');
+
+    const onMove = (moveEvent) => {
+      applyKanbanWidth(startWidth + (moveEvent.clientX - startX));
+    };
+
+    const onUp = () => {
+      resizer.classList.remove('is-dragging');
+      stage.classList.remove('is-resizing-stage-column');
+      document.body.classList.remove('is-resizing-overview-preview');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      persistKanbanWidth();
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  resizer.addEventListener('dblclick', () => {
+    localStorage.removeItem(OVERVIEW_KANBAN_FOCUS_WIDTH_KEY);
+    if (overviewPreviewTaskId) {
+      prepareOverviewPreviewLayout(overviewPreviewTaskId);
+    }
+  });
+
+  resizer.addEventListener('keydown', (e) => {
+    if (!stage.classList.contains('is-preview-open')) return;
+    const current = Number.parseFloat(getComputedStyle(stage).getPropertyValue('--overview-focus-col-width')) || 280;
+    const step = e.shiftKey ? 48 : 16;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      applyKanbanWidth(current - step);
+      persistKanbanWidth();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      applyKanbanWidth(current + step);
+      persistKanbanWidth();
+    }
+  });
+}
+
+function initOverviewPreviewColumnResizer(previewRoot) {
+  if (!previewRoot || previewRoot.dataset.columnResizerBound) return;
+  previewRoot.dataset.columnResizerBound = 'true';
+
+  const columns = previewRoot.querySelector('#overview-task-preview-columns');
+  const resizer = previewRoot.querySelector('#overview-preview-column-resizer');
+  if (!columns || !resizer) return;
+
+  const storedWidth = localStorage.getItem(OVERVIEW_PREVIEW_CHAT_WIDTH_KEY);
+  if (storedWidth) {
+    columns.style.setProperty('--overview-preview-chat-width', `${storedWidth}px`);
+  }
+
+  const clampChatWidth = (width) => {
+    const maxChat = columns.clientWidth - OVERVIEW_PREVIEW_WORK_MIN - resizer.offsetWidth;
+    return Math.round(Math.max(OVERVIEW_PREVIEW_CHAT_MIN, Math.min(maxChat, width)));
+  };
+
+  const persistChatWidth = () => {
+    const chatCol = columns.querySelector('.overview-task-preview-chat-col');
+    const width = chatCol?.getBoundingClientRect().width;
+    if (width) localStorage.setItem(OVERVIEW_PREVIEW_CHAT_WIDTH_KEY, String(Math.round(width)));
+  };
+
+  resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const chatCol = columns.querySelector('.overview-task-preview-chat-col');
+    const startX = e.clientX;
+    const startWidth = chatCol?.getBoundingClientRect().width || 320;
+
+    resizer.classList.add('is-dragging');
+    document.body.classList.add('is-resizing-overview-preview');
+
+    const onMove = (moveEvent) => {
+      const nextWidth = clampChatWidth(startWidth + (moveEvent.clientX - startX));
+      columns.style.setProperty('--overview-preview-chat-width', `${nextWidth}px`);
+    };
+
+    const onUp = () => {
+      resizer.classList.remove('is-dragging');
+      document.body.classList.remove('is-resizing-overview-preview');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      persistChatWidth();
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  resizer.addEventListener('dblclick', () => {
+    columns.style.removeProperty('--overview-preview-chat-width');
+    localStorage.removeItem(OVERVIEW_PREVIEW_CHAT_WIDTH_KEY);
+  });
+
+  resizer.addEventListener('keydown', (e) => {
+    const chatCol = columns.querySelector('.overview-task-preview-chat-col');
+    const current = chatCol?.getBoundingClientRect().width || 320;
+    const step = e.shiftKey ? 48 : 16;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      columns.style.setProperty('--overview-preview-chat-width', `${clampChatWidth(current - step)}px`);
+      persistChatWidth();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      columns.style.setProperty('--overview-preview-chat-width', `${clampChatWidth(current + step)}px`);
+      persistChatWidth();
+    }
+  });
+}
+
+function initOverviewWorkTabs(previewRoot) {
+  if (!previewRoot) return;
+  if (previewRoot.dataset.overviewWorkTabsBound) return;
+  previewRoot.dataset.overviewWorkTabsBound = 'true';
+
+  const tabs = [...previewRoot.querySelectorAll('.overview-work-tab')];
+  const panes = [...previewRoot.querySelectorAll('.overview-work-pane')];
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const pane = tab.dataset.pane;
+      tabs.forEach((t) => {
+        t.classList.toggle('active', t === tab);
+        t.setAttribute('aria-selected', String(t === tab));
+      });
+      panes.forEach((p) => p.classList.toggle('active', p.dataset.pane === pane));
+    });
+  });
+}
+
+function renderOverviewPreviewWork(task, previewRoot) {
+  if (!task || !previewRoot) return;
+
+  // Changes (diff)
+  const fileTree = previewRoot.querySelector('#overview-diff-file-tree');
+  const viewer = previewRoot.querySelector('#overview-diff-viewer');
+  const terminal = previewRoot.querySelector('#overview-task-terminal-output');
+
+  if (fileTree && viewer) {
+    const bundle = getTaskDiffBundle(task);
+    const commits = getDiffCommits(bundle, task);
+    const files = getFilesForChangesFilter(bundle, commits, task);
+
+    fileTree.innerHTML = '';
+    viewer.innerHTML = '';
+
+    if (terminal) terminal.textContent = bundle.terminal;
+
+    if (!files.length || task.status === 'backlog') {
+      viewer.innerHTML = task.status === 'backlog'
+        ? '<div class="diff-empty">No file changes yet. Start the task to see agent edits.</div>'
+        : '<div class="diff-empty">No changes in this view.</div>';
+    } else {
+      let activeIndex = 0;
+
+      fileTree.innerHTML = files
+        .map((file, index) => {
+          const fileStats = countFileLineStats(file.lines);
+          return `
+            <div class="file-tree-item${index === activeIndex ? ' active' : ''}" data-file-index="${index}">
+              <span class="icon-slot" data-icon="file" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+              <span class="file-tree-path">${escapeHtml(file.path)}</span>
+              <span class="file-tree-stats">
+                ${fileStats.additions ? `<span class="diff-stat-add">+${fileStats.additions}</span>` : ''}
+                ${fileStats.deletions ? `<span class="diff-stat-del">−${fileStats.deletions}</span>` : ''}
+              </span>
+            </div>`;
+        })
+        .join('');
+
+      initIcons(fileTree);
+      viewer.innerHTML = renderDiffFileHtml(files[activeIndex]);
+
+      fileTree.querySelectorAll('.file-tree-item').forEach((item) => {
+        item.addEventListener('click', () => {
+          activeIndex = Number(item.dataset.fileIndex);
+          fileTree.querySelectorAll('.file-tree-item').forEach((i) => {
+            i.classList.toggle('active', i === item);
+          });
+          viewer.innerHTML = renderDiffFileHtml(files[activeIndex]);
+        });
+      });
+    }
+  }
+
+  // Browser
+  const frame = previewRoot.querySelector('#overview-browser-preview-frame');
+  const urlEl = previewRoot.querySelector('#overview-browser-preview-url');
+  const empty = previewRoot.querySelector('#overview-browser-preview-empty');
+  const toolbar = previewRoot.querySelector('#overview-browser-toolbar');
+
+  if (frame) {
+    if (!task || task.status === 'backlog') {
+      if (urlEl) urlEl.textContent = '';
+      frame.hidden = true;
+      frame.removeAttribute('src');
+      frame.dataset.src = '';
+      if (empty) empty.hidden = false;
+      if (toolbar) toolbar.hidden = true;
+      initIcons(empty || frame);
+    } else {
+      const preview = getTaskBrowserPreview(task);
+      if (toolbar) toolbar.hidden = false;
+      if (urlEl) urlEl.textContent = preview.url;
+
+      if (!preview.available) {
+        frame.hidden = true;
+        if (empty) empty.hidden = false;
+        initIcons(empty || frame);
+      } else {
+        frame.hidden = false;
+        if (empty) empty.hidden = true;
+
+        if (frame.dataset.src !== preview.src) {
+          frame.dataset.src = preview.src;
+          frame.src = preview.src;
+        }
+      }
+      initIcons(previewRoot);
+    }
+  }
+
+  // Browser controls (scoped)
+  if (!previewRoot.dataset.overviewBrowserControlsBound) {
+    previewRoot.dataset.overviewBrowserControlsBound = 'true';
+
+    previewRoot.querySelector('#overview-browser-refresh')?.addEventListener('click', () => {
+      if (!frame?.src) return;
+      frame.src = frame.src;
+    });
+
+    previewRoot.querySelector('#overview-browser-open-external')?.addEventListener('click', () => {
+      if (frame?.src) window.open(frame.src, '_blank', 'noopener');
+    });
+  }
+}
+
+function overviewKanbanNewTaskLabel() {
+  return {
+    chat: 'New chat',
+    design: 'New artifact',
+    code: 'New task',
+  }[activeAppMode] || 'New task';
+}
+
+function createOverviewKanbanNewTaskButton() {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'overview-kanban-new-task';
+  btn.innerHTML = `${iconHtml('plus', { size: 12, className: 'lucide-icon' })} ${overviewKanbanNewTaskLabel()}`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startNewConversation();
+  });
+  return btn;
+}
+
+function groupTasksByWorktree(tasks) {
+  const groups = new Map();
+  tasks.forEach((task) => {
+    const key = getTaskWorktreeSlug(task);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(task);
+  });
+  return [...groups.values()];
+}
+
+function populateOverviewKanban(container) {
+  const board = container.querySelector('#overview-kanban-board');
+  if (!board) return;
+
+  const boardTasks = overviewTasksForStatusBoard();
+  OVERVIEW_STATUS_COLUMNS.forEach((status) => {
+    const body = board.querySelector(`.column-body[data-drop="${status}"]`);
+    const countEl = board.querySelector(`[data-count="${status}"]`);
+    if (!body) return;
+    body.replaceChildren();
+    const statusTasks = boardTasks.filter((task) => task.status === status);
+    if (countEl) countEl.textContent = String(statusTasks.length);
+
+    if (status === 'in-progress') {
+      body.appendChild(createOverviewKanbanNewTaskButton());
+    }
+
+    groupTasksByWorktree(statusTasks).forEach((groupTasks) => {
+      if (groupTasks.length === 1) {
+        body.appendChild(createTaskCard(groupTasks[0], {
+          onOpen: openOverviewTaskPreview,
+          showProject: true,
+        }));
+        return;
+      }
+
+      const wrap = document.createElement('div');
+      wrap.className = 'task-card-worktree-cluster';
+
+      const title = document.createElement('div');
+      title.className = 'task-card-worktree-group-title has-tooltip';
+      title.dataset.tooltip = getTaskWorktreeFullPath(groupTasks[0]);
+      title.innerHTML = `${iconHtml('folder', { size: 11, className: 'lucide-icon' })}<span>${escapeHtml(getTaskWorktreeShortPath(groupTasks[0]))}</span>`;
+      wrap.appendChild(title);
+
+      const group = document.createElement('div');
+      group.className = 'task-card-worktree-group';
+      group.dataset.worktree = getTaskWorktreeSlug(groupTasks[0]);
+
+      groupTasks.forEach((task) => {
+        group.appendChild(createTaskCard(task, {
+          onOpen: openOverviewTaskPreview,
+          showProject: true,
+          showWorktree: false,
+        }));
+      });
+      wrap.appendChild(group);
+      body.appendChild(wrap);
+    });
+  });
+
+  bindOverviewTaskPreviewChrome(container);
+  initOverviewStageColumnResizer(container.querySelector('#overview-status-stage'));
+  initOverviewArchivePanel(container);
+}
+
+function overviewArchivedTasks() {
+  return tasks.filter((task) => {
+    if (!task.archived || task.draft) return false;
+    if (activeAppMode === 'design') return task.repo === 'design';
+    if (activeAppMode === 'chat') return task.repo !== 'design';
+    return task.repo !== 'design';
+  });
+}
+
+function getArchivedTaskSummary(task) {
+  if (Array.isArray(task.archiveSummary) && task.archiveSummary.length) {
+    return task.archiveSummary;
+  }
+  const bullets = [];
+  if (task.files) bullets.push(`Touched ${task.files} file${task.files === 1 ? '' : 's'} (+${task.additions || 0} / −${task.deletions || 0})`);
+  if (task.commits) bullets.push(`Landed ${task.commits} commit${task.commits === 1 ? '' : 's'}`);
+  if (task.prs) bullets.push(`Opened ${task.prs} PR${task.prs === 1 ? '' : 's'}`);
+  if (!bullets.length) bullets.push('Archived with no recorded code changes');
+  return bullets;
+}
+
+function getArchivedPrGitLabel(task) {
+  if (task.archivePrGitStatus) return task.archivePrGitStatus;
+  if (!task.prs) return 'No PR';
+  return task.status === 'closed' ? 'Merged' : 'Open';
+}
+
+function overviewArchiveEditsHtml(task) {
+  const files = task.files || 0;
+  const additions = task.additions || 0;
+  const deletions = task.deletions || 0;
+  if (!files && !additions && !deletions) {
+    return `<span class="overview-archive-muted">No edits</span>`;
+  }
+  return `<span class="overview-archive-edits">
+    ${files} file${files === 1 ? '' : 's'}
+    <span class="add">+${additions}</span>
+    <span class="del">−${deletions}</span>
+  </span>`;
+}
+
+function overviewArchivePrHtml(task) {
+  const gitStatus = getArchivedPrGitLabel(task);
+  const statusClass = gitStatus.toLowerCase().replace(/\s+/g, '-');
+  if (!task.prs) {
+    return `<span class="overview-archive-pr-status overview-archive-pr-status--none">${escapeHtml(gitStatus)}</span>`;
+  }
+  const prs = getTaskPullRequests({ ...task, status: gitStatus === 'Merged' ? 'closed' : task.status });
+  const pr = prs[0];
+  return `<div class="overview-archive-pr">
+    <span class="overview-archive-pr-id">${iconHtml('git-pull-request', { size: 12, className: 'lucide-icon' })} #${pr?.number || taskPrNumber(task)}</span>
+    <span class="overview-archive-pr-status overview-archive-pr-status--${statusClass}">${escapeHtml(gitStatus)}</span>
+  </div>`;
+}
+
+function overviewArchiveRowHtml(task) {
+  const summary = getArchivedTaskSummary(task)
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join('');
+  return `<tr data-task-id="${task.id}">
+    <td class="overview-archive-name">
+      <div class="overview-archive-title">${escapeHtml(task.title)}</div>
+      <div class="overview-archive-meta">${escapeHtml(getTaskWorktreeShortPath(task))}</div>
+    </td>
+    <td>${overviewArchiveEditsHtml(task)}</td>
+    <td>${overviewArchivePrHtml(task)}</td>
+    <td><ul class="overview-archive-summary">${summary}</ul></td>
+  </tr>`;
+}
+
+function renderOverviewArchiveTable(container = document) {
+  const body = container.querySelector('#overview-archive-table-body')
+    || $('#overview-archive-table-body');
+  const empty = container.querySelector('#overview-archive-empty')
+    || $('#overview-archive-empty');
+  const countEls = [
+    container.querySelector('#overview-archive-count'),
+    container.querySelector('#overview-archive-panel-count'),
+    $('#overview-archive-count'),
+    $('#overview-archive-panel-count'),
+  ].filter(Boolean);
+
+  const archived = overviewArchivedTasks();
+  const query = overviewArchiveQuery.trim().toLowerCase();
+  const filtered = !query
+    ? archived
+    : archived.filter((task) => {
+      const haystack = [
+        task.title,
+        getTaskWorktreeShortPath(task),
+        getArchivedPrGitLabel(task),
+        ...getArchivedTaskSummary(task),
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+
+  countEls.forEach((el) => {
+    el.textContent = String(archived.length);
+  });
+
+  if (!body) return;
+  body.innerHTML = filtered.map(overviewArchiveRowHtml).join('');
+  if (empty) {
+    empty.hidden = filtered.length > 0;
+    empty.textContent = archived.length === 0
+      ? 'No archived tasks yet.'
+      : 'No archived tasks match your search.';
+  }
+  initIcons(body);
+}
+
+function setOverviewArchiveOpen(open) {
+  overviewArchiveOpen = Boolean(open);
+  const shell = $('#overview-board-shell');
+  const panel = $('#overview-archive-panel');
+  const toggle = $('#overview-archive-toggle');
+
+  if (overviewArchiveOpen && overviewPreviewTaskId) {
+    closeOverviewTaskPreview();
+  }
+
+  shell?.classList.toggle('is-archive-open', overviewArchiveOpen);
+  if (panel) {
+    panel.setAttribute('aria-hidden', String(!overviewArchiveOpen));
+  }
+  if (toggle) toggle.setAttribute('aria-expanded', String(overviewArchiveOpen));
+
+  if (overviewArchiveOpen) {
+    renderOverviewArchiveTable();
+    const search = $('#overview-archive-search');
+    if (search) {
+      search.value = overviewArchiveQuery;
+      window.setTimeout(() => search.focus(), 280);
+    }
+  }
+}
+
+function initOverviewArchivePanel(container) {
+  renderOverviewArchiveTable(container);
+
+  const toggle = container.querySelector('#overview-archive-toggle');
+  const closeBtn = container.querySelector('#overview-archive-close');
+  const search = container.querySelector('#overview-archive-search');
+
+  toggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOverviewArchiveOpen(!overviewArchiveOpen);
+  });
+  closeBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOverviewArchiveOpen(false);
+  });
+  search?.addEventListener('input', () => {
+    overviewArchiveQuery = search.value;
+    renderOverviewArchiveTable(container);
+  });
+  search?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setOverviewArchiveOpen(false);
+    }
+  });
+
+  if (overviewArchiveOpen) setOverviewArchiveOpen(true);
+}
+
+function clearOverviewPreviewFocus() {
+  const board = $('#overview-kanban-board');
+  $$('#overview-kanban-board .task-card').forEach((card) => {
+    card.classList.remove('is-preview-focus', 'is-preview-dim');
+  });
+  $$('#overview-kanban-board .kanban-column').forEach((col) => {
+    col.classList.remove('is-preview-focus', 'is-preview-hidden');
+    col.style.flex = '';
+    col.style.width = '';
+    col.style.minWidth = '';
+    col.style.maxWidth = '';
+    const toggle = col.querySelector('.overview-column-toggle');
+    if (toggle) {
+      toggle.hidden = true;
+      toggle.setAttribute('aria-expanded', 'true');
+      const icon = toggle.querySelector('.overview-column-toggle-icon');
+      if (icon) icon.dataset.icon = 'panel-left-close';
+    }
+  });
+  if (board) {
+    board.style.transform = '';
+    board.style.width = '';
+  }
+  const stage = $('#overview-status-stage');
+  if (stage) {
+    delete stage.dataset.focusStatus;
+    delete stage.dataset.previewOffset;
+    stage.classList.remove('is-kanban-compressed');
+    stage.style.removeProperty('--overview-focus-col-width');
+  }
+  overviewKanbanCompressed = false;
+  overviewPreviewColumnWidths = null;
+}
+
+function clearOverviewColumnInlineSizes(columns, board) {
+  columns.forEach((col) => {
+    col.style.flex = '';
+    col.style.width = '';
+    col.style.minWidth = '';
+    col.style.maxWidth = '';
+  });
+  if (board) board.style.width = '';
+}
+
+function restoreOverviewPreviewColumnLayout(stage, board, columns, focusStatus) {
+  if (!stage || !board || !columns.length || !overviewPreviewColumnWidths?.length) return false;
+
+  const focusIndex = columns.findIndex((col) => col.dataset.status === focusStatus);
+  if (focusIndex < 0) return false;
+
+  const gap = Number.parseFloat(getComputedStyle(board).gap) || 10;
+  columns.forEach((col, index) => {
+    const width = overviewPreviewColumnWidths[index];
+    if (!width) return;
+    col.style.flex = `0 0 ${width}px`;
+    col.style.width = `${width}px`;
+    col.style.minWidth = `${width}px`;
+    col.style.maxWidth = `${width}px`;
+  });
+
+  const totalWidth = overviewPreviewColumnWidths.reduce((sum, width) => sum + width, 0)
+    + gap * Math.max(0, columns.length - 1);
+  board.style.width = `${totalWidth}px`;
+
+  const focusWidth = overviewPreviewColumnWidths[focusIndex];
+  stage.style.setProperty('--overview-focus-col-width', `${Math.round(focusWidth)}px`);
+
+  const focusCol = columns[focusIndex];
+  const offset = focusCol ? focusCol.offsetLeft : 0;
+  stage.dataset.previewOffset = String(offset);
+  board.style.transform = `translateX(-${offset}px)`;
+  return true;
+}
+
+function updateOverviewColumnToggleButtons() {
+  const stage = $('#overview-status-stage');
+  const isOpen = stage?.classList.contains('is-preview-open');
+  $$('#overview-kanban-board .kanban-column').forEach((col) => {
+    const toggle = col.querySelector('.overview-column-toggle');
+    if (!toggle) return;
+    const isFocus = col.classList.contains('is-preview-focus');
+    toggle.hidden = !isOpen || !isFocus;
+    if (!isFocus) return;
+
+    const icon = toggle.querySelector('.overview-column-toggle-icon');
+    const compressed = overviewKanbanCompressed;
+    toggle.setAttribute('aria-expanded', String(!compressed));
+    toggle.setAttribute('aria-label', compressed ? 'Expand column' : 'Compress column');
+    if (icon) icon.dataset.icon = compressed ? 'panel-right-open' : 'panel-left-close';
+    initIcons(toggle);
+  });
+}
+
+function setOverviewKanbanCompressed(compressed) {
+  const stage = $('#overview-status-stage');
+  if (!stage || !overviewPreviewTaskId) return;
+
+  overviewKanbanCompressed = compressed;
+  stage.classList.toggle('is-kanban-compressed', compressed);
+
+  if (compressed) {
+    stage.style.setProperty('--overview-focus-col-width', `${OVERVIEW_KANBAN_COMPRESSED_WIDTH}px`);
+    const focusCol = stage.querySelector('.kanban-column.is-preview-focus');
+    if (focusCol) {
+      focusCol.style.flex = `0 0 ${OVERVIEW_KANBAN_COMPRESSED_WIDTH}px`;
+      focusCol.style.width = `${OVERVIEW_KANBAN_COMPRESSED_WIDTH}px`;
+      focusCol.style.minWidth = `${OVERVIEW_KANBAN_COMPRESSED_WIDTH}px`;
+      focusCol.style.maxWidth = `${OVERVIEW_KANBAN_COMPRESSED_WIDTH}px`;
+    }
+  } else if (overviewPreviewTaskId) {
+    const board = $('#overview-kanban-board');
+    const columns = board ? [...board.querySelectorAll('.kanban-column')] : [];
+    const focusStatus = getTask(overviewPreviewTaskId)?.status;
+    const restored = restoreOverviewPreviewColumnLayout(stage, board, columns, focusStatus);
+    if (!restored) {
+      prepareOverviewPreviewLayout(overviewPreviewTaskId);
+    }
+  }
+
+  updateOverviewColumnToggleButtons();
+}
+
+function prepareOverviewPreviewLayout(taskId) {
+  const task = getTask(taskId);
+  const focusStatus = task?.status;
+  const stage = $('#overview-status-stage');
+  const board = $('#overview-kanban-board');
+  if (!board || !stage || !focusStatus) return 0;
+
+  stage.dataset.focusStatus = focusStatus;
+
+  $$('#overview-kanban-board .task-card').forEach((card) => {
+    const isFocus = card.dataset.id === taskId;
+    card.classList.toggle('is-preview-focus', isFocus);
+    card.classList.toggle('is-preview-dim', !isFocus);
+  });
+
+  const columns = [...board.querySelectorAll('.kanban-column')];
+  const focusCol = columns.find((col) => col.dataset.status === focusStatus) || null;
+  const gap = Number.parseFloat(getComputedStyle(board).gap) || 10;
+
+  const focusColIsCompressed = focusCol
+    && Number.parseFloat(focusCol.style.maxWidth) === OVERVIEW_KANBAN_COMPRESSED_WIDTH;
+
+  let widths;
+  if (!overviewKanbanCompressed && overviewPreviewColumnWidths?.length === columns.length) {
+    widths = overviewPreviewColumnWidths;
+  } else {
+    if (focusColIsCompressed) {
+      clearOverviewColumnInlineSizes(columns, board);
+      void board.offsetWidth;
+    }
+    widths = columns.map((col) => col.getBoundingClientRect().width);
+  }
+
+  if (!overviewKanbanCompressed) {
+    const storedWidth = localStorage.getItem(OVERVIEW_KANBAN_FOCUS_WIDTH_KEY);
+    const focusIndex = columns.findIndex((col) => col.dataset.status === focusStatus);
+    if (storedWidth && focusIndex >= 0) {
+      const resizerWidth = stage.querySelector('#overview-stage-column-resizer')?.offsetWidth || 10;
+      const maxKanban = stage.clientWidth - OVERVIEW_PREVIEW_PANEL_MIN - resizerWidth;
+      const clamped = Math.round(Math.max(
+        OVERVIEW_KANBAN_FOCUS_MIN,
+        Math.min(maxKanban, Number.parseFloat(storedWidth)),
+      ));
+      widths = [...widths];
+      widths[focusIndex] = clamped;
+    }
+  }
+
+  if (!overviewKanbanCompressed) {
+    overviewPreviewColumnWidths = widths;
+  }
+
+  // Measure natural widths before locking so the board pans instead of reflowing.
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0)
+    + gap * Math.max(0, columns.length - 1);
+
+  columns.forEach((col, index) => {
+    const width = widths[index];
+    col.style.flex = `0 0 ${width}px`;
+    col.style.width = `${width}px`;
+    col.style.minWidth = `${width}px`;
+    col.style.maxWidth = `${width}px`;
+    const isFocus = col.dataset.status === focusStatus;
+    col.classList.toggle('is-preview-focus', isFocus);
+    col.classList.toggle('is-preview-hidden', !isFocus);
+  });
+
+  board.style.width = `${totalWidth}px`;
+
+  const focusWidth = focusCol
+    ? focusCol.getBoundingClientRect().width
+    : 280;
+  stage.style.setProperty('--overview-focus-col-width', `${Math.round(focusWidth)}px`);
+
+  const offset = focusCol ? focusCol.offsetLeft : 0;
+  stage.dataset.previewOffset = String(offset);
+
+  if (overviewKanbanCompressed) {
+    setOverviewKanbanCompressed(true);
+  } else {
+    updateOverviewColumnToggleButtons();
+  }
+
+  return offset;
+}
+
+function fillOverviewTaskPreviewChat(container, task) {
+  container.innerHTML = '';
+
+  if (activeAppMode === 'design') {
+    const messages = getTaskModeMessages(task, 'design');
+    if (messages.length > 0) {
+      messages.forEach((msg) => {
+        if (msg.role === 'user') appendUserBubble(container, msg.text, msg.links);
+        else appendAgentTimeline(container, msg.steps);
+      });
+      return;
+    }
+    if (task.workSteps?.length) {
+      let steps = task.workSteps;
+      if (task.status === 'review' && task.reviewReason === 'needs-input' && !needsInputTailAlreadyAppended(steps)) {
+        steps = [...steps, ...getNeedsInputTailSteps(task)];
+      }
+      appendAgentTimeline(container, steps);
+      return;
+    }
+    appendAgentTimeline(container, [
+      {
+        type: 'text',
+        dot: 'gray',
+        html: '<p>No design agent activity yet. Open the artifact to start prototyping.</p>',
+      },
+    ]);
+    return;
+  }
+
+  if (task.status === 'backlog') {
+    appendAgentTimeline(container, [
+      {
+        type: 'text',
+        dot: 'gray',
+        html: '<p>This task is still in backlog. Open it to start the agent.</p>',
+      },
+    ]);
+    return;
+  }
+
+  appendTaskDescriptionBubble(container, task);
+
+  if (task.chat?.length > 0) {
+    task.chat.forEach((msg) => {
+      if (msg.role === 'user') appendUserBubble(container, msg.text);
+      else appendAgentTimeline(container, msg.steps);
+    });
+    return;
+  }
+
+  if (task.workSteps?.length) {
+    let steps = task.workSteps;
+    if (task.status === 'review' && task.reviewReason === 'needs-input' && !needsInputTailAlreadyAppended(steps)) {
+      steps = [...steps, ...getNeedsInputTailSteps(task)];
+    }
+    appendAgentTimeline(container, steps);
+    return;
+  }
+
+  appendAgentTimeline(container, [
+    {
+      type: 'file-read',
+      dot: 'green',
+      file: `${task.repo}/README.md`,
+      desc: 'read task context',
+      code: `<span class="key">"task"</span>: <span class="val">"${escapeHtml(task.title)}"</span>,
+<span class="key">"status"</span>: <span class="val">"${STATUS_LABELS[task.status]}"</span>`,
+    },
+    {
+      type: 'text',
+      dot: 'gray',
+      html: `<p>Task is in <strong>${STATUS_LABELS[task.status]}</strong>. Open the full task to continue with the agent.</p>`,
+    },
+  ]);
+}
+
+function renderOverviewTaskPreview(task) {
+  const preview = $('#overview-task-preview');
+  if (!preview || !task) return;
+
+  const title = $('#overview-task-preview-title');
+  const status = $('#overview-task-preview-status');
+  const project = $('#overview-task-preview-project');
+  const chat = $('#overview-task-preview-chat');
+
+  if (title) title.textContent = task.title;
+  if (status) {
+    status.textContent = STATUS_LABELS[task.status] || task.status;
+    status.className = `status-badge ${task.status}`;
+  }
+  if (project) {
+    project.textContent = getProjectRepoShortName(task.project || 'kimchi');
+  }
+  if (chat) fillOverviewTaskPreviewChat(chat, task);
+  initIcons(preview);
+}
+
+function closeOverviewTaskPreview() {
+  const stage = $('#overview-status-stage');
+  const preview = $('#overview-task-preview');
+  const board = $('#overview-kanban-board');
+  overviewPreviewTaskId = null;
+  overviewKanbanCompressed = false;
+
+  const stageResizer = $('#overview-stage-column-resizer');
+  if (stageResizer) stageResizer.hidden = true;
+
+  stage?.classList.remove('is-preview-open', 'is-kanban-compressed');
+  preview?.setAttribute('aria-hidden', 'true');
+
+  if (board) board.style.transform = 'translateX(0px)';
+
+  $$('#overview-kanban-board .task-card').forEach((card) => {
+    card.classList.remove('is-preview-focus', 'is-preview-dim');
+  });
+  $$('#overview-kanban-board .kanban-column').forEach((col) => {
+    col.classList.remove('is-preview-focus', 'is-preview-hidden');
+  });
+
+  window.clearTimeout(overviewPreviewCloseTimer);
+  overviewPreviewCloseTimer = window.setTimeout(() => {
+    overviewPreviewCloseTimer = null;
+    if (!overviewPreviewTaskId) clearOverviewPreviewFocus();
+  }, OVERVIEW_PREVIEW_ANIM_MS);
+}
+
+function openOverviewTaskPreview(taskId) {
+  const task = getTask(taskId);
+  if (!task) return;
+  if (subheaderView !== 'overview' || overviewLayout !== 'status') {
+    openOverviewTask(taskId);
+    return;
+  }
+
+  if (overviewArchiveOpen) setOverviewArchiveOpen(false);
+
+  const stage = $('#overview-status-stage');
+  const preview = $('#overview-task-preview');
+  const board = $('#overview-kanban-board');
+  if (!stage || !preview || !board) {
+    openOverviewTask(taskId);
+    return;
+  }
+
+  window.clearTimeout(overviewPreviewCloseTimer);
+  overviewPreviewCloseTimer = null;
+
+  const wasOpen = stage.classList.contains('is-preview-open');
+  overviewPreviewTaskId = taskId;
+  renderOverviewTaskPreview(task);
+  initOverviewWorkTabs(preview);
+  initOverviewPreviewColumnResizer(preview);
+  renderOverviewPreviewWork(task, preview);
+  preview.setAttribute('aria-hidden', 'false');
+
+  if (!wasOpen) {
+    clearOverviewPreviewFocus();
+    // Force layout so we measure the resting board before locking widths.
+    void board.offsetWidth;
+  }
+
+  const offset = prepareOverviewPreviewLayout(taskId);
+
+  const stageResizer = $('#overview-stage-column-resizer');
+  if (stageResizer) stageResizer.hidden = false;
+
+  if (wasOpen) {
+    stage.classList.add('is-preview-open');
+    board.style.transform = `translateX(-${offset}px)`;
+  } else {
+    board.style.transform = 'translateX(0px)';
+    void board.offsetWidth;
+    requestAnimationFrame(() => {
+      if (overviewPreviewTaskId !== taskId) return;
+      stage.classList.add('is-preview-open');
+      board.style.transform = `translateX(-${offset}px)`;
+    });
+  }
+
+  const chat = $('#overview-task-preview-chat');
+  if (chat) chat.scrollTop = chat.scrollHeight;
+}
+
+function bindOverviewTaskPreviewChrome(container) {
+  container.querySelector('#overview-task-preview-close')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeOverviewTaskPreview();
+  });
+  container.querySelector('#overview-kanban-board')?.addEventListener('click', (e) => {
+    if (e.target.closest('.overview-back-to-board')) {
+      e.stopPropagation();
+      closeOverviewTaskPreview();
+      return;
+    }
+    const toggle = e.target.closest('.overview-column-toggle');
+    if (toggle) {
+      e.stopPropagation();
+      setOverviewKanbanCompressed(!overviewKanbanCompressed);
+    }
+  });
+  container.querySelector('.overview-kanban-wrap')?.addEventListener('click', (e) => {
+    if (!overviewPreviewTaskId) return;
+    if (e.target.closest('.task-card')) return;
+    if (e.target.closest('.overview-column-toggle')) return;
+    if (e.target.closest('#overview-stage-column-resizer')) return;
+    if (e.target.closest('.overview-kanban-new-task')) return;
+    if (e.target.closest('.overview-back-to-board')) return;
+    closeOverviewTaskPreview();
+  });
+}
+
+function setOverviewLayout(layout) {
+  if (layout !== overviewLayout) closeOverviewTaskPreview();
+  overviewLayout = layout === 'status' ? 'status' : 'projects';
+  if (subheaderView === 'overview') renderProjectOverview();
+}
+
 function renderProjectOverview() {
   const container = $('#project-overview-content');
   if (!container) return;
 
-  let html = '';
+  const previewId = overviewPreviewTaskId;
+  const overviewRoot = $('#project-overview');
+  // This overview screen is now status-only (no Status/Projects toggle).
+  overviewRoot?.classList.add('is-status-layout');
+
+  let boardTasks;
   if (activeAppMode === 'chat') {
-    const chats = tasks.filter((task) => !task.archived && !task.draft);
-    const groups = groupTasksByProject(chats);
-    html = `<header class="overview-header">
-      <h2>Conversations</h2>
-      <p class="overview-subtitle">Recap of chats across your projects</p>
-    </header>
-    <div class="overview-project-groups">`;
-    groups.forEach((projectTasks, projectId) => {
-      const cards = sortOverviewTasks(
-        projectTasks.filter((task) => !task.archived && !task.draft),
-        'chat',
-      )
-        .map(overviewChatCardHtml)
-        .join('');
-      html += `<section class="overview-project-group">
-        <h3 class="overview-project-name">${escapeHtml(projectLabel(projectId))}</h3>
-        <div class="overview-card-grid">
-          ${cards}${overviewCreateCardHtml(projectId)}
-        </div>
-      </section>`;
-    });
-    html += '</div>';
+    boardTasks = tasks.filter((task) => task.repo !== 'design' && !task.archived && !task.draft);
   } else if (activeAppMode === 'design') {
-    const artifacts = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
-    const groups = groupTasksByProject(artifacts);
-    html = `<header class="overview-header">
-      <h2>Artifacts</h2>
-      <p class="overview-subtitle">Prototype previews grouped by project</p>
-    </header>
-    <div class="overview-project-groups">`;
-    groups.forEach((projectTasks, projectId) => {
-      const cards = sortOverviewTasks(
-        projectTasks.filter((task) => !task.archived && !task.draft),
-        'design',
-      )
-        .map(overviewDesignCardHtml)
-        .join('');
-      html += `<section class="overview-project-group">
-        <h3 class="overview-project-name">${escapeHtml(projectLabel(projectId))}</h3>
-        <div class="overview-card-grid">
-          ${cards}${overviewCreateCardHtml(projectId)}
-        </div>
-      </section>`;
-    });
-    html += '</div>';
+    boardTasks = tasks.filter((task) => task.repo === 'design' && !task.archived && !task.draft);
   } else {
-    const codeTasks = tasks.filter((task) => task.repo !== 'design' && !task.archived);
-    const groups = groupTasksByProject(codeTasks);
-    html = `<header class="overview-header">
-      <h2>Repositories</h2>
-      <p class="overview-subtitle">Code activity, PRs, and agent status by project</p>
-    </header>
-    <div class="overview-project-groups">`;
-    groups.forEach((projectTasks, projectId) => {
-      html += overviewCodeProjectGroupHtml(projectId, projectTasks);
-    });
-    html += '</div>';
+    boardTasks = tasks.filter((task) => task.repo !== 'design' && !task.archived);
   }
 
-  container.innerHTML = html;
+  container.innerHTML = overviewStatusKanbanHtml(boardTasks);
   initIcons(container);
   bindProjectOverviewEvents(container);
+  populateOverviewKanban(container);
+  if (previewId && getTask(previewId)) {
+    openOverviewTaskPreview(previewId);
+  }
 }
 
 function openOverviewCreate(projectId) {
@@ -3431,6 +4724,7 @@ function bindProjectOverviewEvents(container) {
 
 function initSubheaderNav() {
   $('#subheader-overview-btn')?.addEventListener('click', () => {
+    closeOverviewTaskPreview();
     setSubheaderView('overview');
   });
 
@@ -3650,6 +4944,12 @@ function projectLabel(projectId) {
 
 function getProjectRepo(projectId) {
   return PROJECT_REPOS[projectId] || `cast-ai/${projectId}`;
+}
+
+function getProjectRepoShortName(projectId) {
+  const full = getProjectRepo(projectId);
+  const slash = full.lastIndexOf('/');
+  return slash === -1 ? full : full.slice(slash + 1);
 }
 
 const OVERVIEW_STATUS_ORDER = {
@@ -4293,32 +5593,81 @@ function initNewProjectButton() {
 }
 
 function syncReviewReason(task) {
-  if (task.status !== 'review') {
-    task.reviewReason = null;
-    task.reviewSince = null;
+  if (task.status === 'pr-review') {
+    if (!PR_REVIEW_REASONS.has(task.reviewReason)) {
+      const options = [...PR_REVIEW_REASONS];
+      const index = Number.parseInt(String(task.id).replace(/\D/g, '') || '0', 10) % options.length;
+      task.reviewReason = options[index];
+    }
+    if (!task.reviewSince) task.reviewSince = Date.now();
+    if (!task.prs) task.prs = 1;
     return;
   }
-  if (!task.reviewReason) {
-    task.reviewReason = Number.parseInt(task.id.replace(/\D/g, ''), 10) % 2 === 0
-      ? 'needs-input'
-      : 'ready';
+
+  if (task.status === 'review') {
+    if (!AGENT_REVIEW_REASONS.has(task.reviewReason)) {
+      task.reviewReason = Number.parseInt(String(task.id).replace(/\D/g, '') || '0', 10) % 2 === 0
+        ? 'needs-input'
+        : 'ready';
+    }
+    if (!task.reviewSince) task.reviewSince = Date.now();
+    return;
   }
-  if (!task.reviewSince) task.reviewSince = Date.now();
+
+  task.reviewReason = null;
+  task.reviewSince = null;
 }
 
 function getReviewReasonMeta(task) {
-  if (task.status !== 'review') return null;
+  if (task.status !== 'review' && task.status !== 'pr-review') return null;
   syncReviewReason(task);
   return REVIEW_REASONS[task.reviewReason] || REVIEW_REASONS.ready;
+}
+
+const TASK_CARD_SPINNER_FRAMES = [
+  // line spin
+  '|', '/', '╱', '-', '╲', '\\', '|', '/', '-', '\\',
+  // circle fill / empty
+  '○', '◔', '◑', '◕', '●', '◕', '◑', '◔', '○',
+  '◐', '◓', '◑', '◒', '◐',
+  // star / asterisk blink
+  '·', '․', '*', '∗', '✦', '✶', '✦', '∗', '*', '․', '·',
+];
+const TASK_CARD_SPINNER_HOLD_TICKS = 2;
+let taskCardSpinnerFrame = 0;
+let taskCardSpinnerHold = 0;
+let taskCardSpinnerTimer = null;
+
+function tickTaskCardSpinners() {
+  taskCardSpinnerHold += 1;
+  if (taskCardSpinnerHold < TASK_CARD_SPINNER_HOLD_TICKS) return;
+  taskCardSpinnerHold = 0;
+  taskCardSpinnerFrame = (taskCardSpinnerFrame + 1) % TASK_CARD_SPINNER_FRAMES.length;
+  const glyph = TASK_CARD_SPINNER_FRAMES[taskCardSpinnerFrame];
+  document.querySelectorAll('.task-card-spinner-glyph').forEach((el) => {
+    el.textContent = glyph;
+  });
+}
+
+function startTaskCardSpinners() {
+  if (taskCardSpinnerTimer != null) return;
+  taskCardSpinnerTimer = window.setInterval(tickTaskCardSpinners, 110);
 }
 
 function reviewStatusCardHtml(task) {
   const meta = getReviewReasonMeta(task);
   if (!meta) return '';
-  return `<div class="task-card-review task-card-review--${task.reviewReason}">
-    <span class="task-card-review-dot" aria-hidden="true"></span>
-    <span class="task-card-review-label">${escapeHtml(meta.cardLabel)}</span>
-  </div>`;
+  return `<span class="task-card-review task-card-review--${task.reviewReason}" role="img" aria-label="${escapeHtml(meta.cardLabel)}">${escapeHtml(meta.cardLabel)}</span>`;
+}
+
+function taskCardInProgressSpinnerHtml() {
+  return `<span class="task-card-spinner" role="status" aria-label="In progress"><span class="task-card-spinner-glyph">${TASK_CARD_SPINNER_FRAMES[taskCardSpinnerFrame]}</span></span>`;
+}
+
+function taskCardStatusEndHtml(task) {
+  if (task.status === 'in-progress') return taskCardInProgressSpinnerHtml();
+  if (task.status === 'review' || task.status === 'pr-review') return reviewStatusCardHtml(task);
+  return '';
 }
 
 function sidebarTaskLeadingHtml(task) {
@@ -4332,7 +5681,7 @@ function sidebarTaskLeadingHtml(task) {
       ${iconHtml('loader', { size: 12, className: 'lucide-icon lucide-spin' })}
     </span>`;
   }
-  if (task.status === 'review') {
+  if (task.status === 'review' || task.status === 'pr-review') {
     const meta = getReviewReasonMeta(task);
     return `<span class="sidebar-task-icon sidebar-task-icon--review sidebar-task-icon--${task.reviewReason}" aria-hidden="true">
       ${iconHtml(meta.icon, { size: 12, className: 'lucide-icon' })}
@@ -4348,20 +5697,96 @@ function sidebarTaskLeadingHtml(task) {
   return '';
 }
 
-function taskCardStatsHtml(task) {
-  return `(${task.files} files <span class="add">+${task.additions}</span> <span class="del">-${task.deletions}</span>)`;
+function getTaskWorktreeSlug(task) {
+  return task.worktree || TASK_WORKTREES[task.id] || 'worktree-1';
+}
+
+function getTaskWorktreeShortPath(task) {
+  return `../${getTaskWorktreeSlug(task)}`;
+}
+
+function getTaskWorktreeFullPath(task) {
+  return `~/kimchi/${getTaskWorktreeSlug(task)}`;
+}
+
+function getTaskBranchName(task) {
+  return getTaskDiffBundle(task).branch;
+}
+
+function taskCardGitTooltip(task) {
+  const branch = getTaskBranchName(task);
+  const parts = [branch];
+  if (task.prs > 0) parts.push(`${task.prs} open PR${task.prs === 1 ? '' : 's'}`);
+  if (task.commits > 0) parts.push(`${task.commits} commit${task.commits === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+
+function taskCardDiffTooltip(task) {
+  if (!shouldShowTaskCardDiffPill(task)) return 'No file changes yet';
+  const parts = [];
+  if (task.files) parts.push(`${task.files} file${task.files === 1 ? '' : 's'}`);
+  if (task.additions) parts.push(`+${task.additions}`);
+  if (task.deletions) parts.push(`−${task.deletions}`);
+  return parts.join(' · ') || 'No file changes yet';
+}
+
+function shouldShowTaskCardDiffPill(task) {
+  return (task.files || 0) > 0 || (task.additions || 0) > 0 || (task.deletions || 0) > 0;
+}
+
+function taskCardGitPillHtml(task) {
+  const hasPr = task.prs > 0;
+  const hasCommits = task.commits > 0;
+  const branch = getTaskBranchName(task);
+  const label = hasCommits || hasPr ? branch : 'main';
+  const modifier = hasPr ? 'git-pr' : hasCommits ? 'git-branch' : 'git-idle';
+  const icon = hasPr ? 'git-pull-request' : 'git-branch';
+
+  return `<span class="task-card-pill task-card-pill--git task-card-pill--${modifier} has-tooltip" data-tooltip="${escapeHtml(taskCardGitTooltip(task))}">
+    ${iconHtml(icon, { size: 11, className: 'lucide-icon task-card-pill-icon' })}
+    <span class="task-card-pill-label">${escapeHtml(label)}</span>
+  </span>`;
+}
+
+function taskCardDiffPillHtml(task) {
+  const files = task.files || 0;
+  const additions = task.additions || 0;
+  return `<span class="task-card-pill task-card-pill--diff has-tooltip" data-tooltip="${escapeHtml(taskCardDiffTooltip(task))}">
+    ${iconHtml('file', { size: 11, className: 'lucide-icon task-card-pill-icon' })}
+    <span class="task-card-pill-label">${files} <span class="task-card-pill-sep">•</span> <span class="add">+${additions}</span></span>
+  </span>`;
+}
+
+function taskCardWorktreePillHtml(task) {
+  const shortPath = getTaskWorktreeShortPath(task);
+  return `<span class="task-card-pill task-card-pill--worktree has-tooltip" data-tooltip="${escapeHtml(getTaskWorktreeFullPath(task))}">
+    ${iconHtml('folder', { size: 11, className: 'lucide-icon task-card-pill-icon' })}
+    <span class="task-card-pill-label">${escapeHtml(shortPath)}</span>
+  </span>`;
+}
+
+function taskCardSecondaryHtml(task, { showProject = false, showWorktree = true } = {}) {
+  if (!showProject) {
+    const linkCount = getTaskLinkCount(task);
+    return `<div class="task-card-secondary">
+      <span class="task-card-tag task-card-tag--repo">${escapeHtml(task.repo)}</span>
+      ${linkCount > 0 ? `<span class="task-card-tag task-card-tag--linked">${iconHtml('link', { size: 10, className: 'lucide-icon task-card-tag-icon' })} ${linkCount} task${linkCount === 1 ? '' : 's'}</span>` : ''}
+    </div>`;
+  }
+
+  const pills = [];
+  if (showWorktree) pills.push(taskCardWorktreePillHtml(task));
+  pills.push(taskCardGitPillHtml(task));
+  if (shouldShowTaskCardDiffPill(task)) pills.push(taskCardDiffPillHtml(task));
+
+  return `<div class="task-card-secondary">${pills.join('')}</div>`;
 }
 
 function taskCardFooterActionHtml(task) {
-  if (task.status === 'in-progress' || task.status === 'review') {
-    return `<div class="task-card-stats">${taskCardStatsHtml(task)}</div>`;
-  }
-  if (task.status === 'backlog') {
-    return `<button type="button" class="task-card-play" data-task-id="${task.id}" aria-label="Start task">
-      ${iconHtml('play', { size: 14, className: 'lucide-icon' })}
-    </button>`;
-  }
-  return '';
+  if (task.status !== 'backlog') return '';
+  return `<button type="button" class="task-card-play" data-task-id="${task.id}" aria-label="Start task">
+    ${iconHtml('play', { size: 14, className: 'lucide-icon' })}
+  </button>`;
 }
 
 function getTasksBlockedBy(taskId) {
@@ -4373,15 +5798,6 @@ function getTaskLinkCount(task) {
   if (task.blockedBy) count += 1;
   count += getTasksBlockedBy(task.id).length;
   return count;
-}
-
-function taskCardTagsHtml(task) {
-  const linkCount = getTaskLinkCount(task);
-
-  return `<div class="task-card-tags">
-    <span class="task-card-tag task-card-tag--repo">${escapeHtml(task.repo)}</span>
-    ${linkCount > 0 ? `<span class="task-card-tag task-card-tag--linked">${iconHtml('link', { size: 10, className: 'lucide-icon task-card-tag-icon' })} ${linkCount} task${linkCount === 1 ? '' : 's'}</span>` : ''}
-  </div>`;
 }
 
 function releaseBlockedTasks(closedTaskId) {
@@ -4440,6 +5856,7 @@ function startTask(taskId) {
   if (!task) return;
   moveTaskToInProgress(task);
   renderBoard();
+  if (subheaderView === 'overview') renderProjectOverview();
   if (activeTaskId === task.id) {
     updateTaskDetailLayout(task);
     renderTaskChat();
@@ -4467,7 +5884,7 @@ function archiveCompletedTasks() {
 
   const archivedIds = new Set(toArchive.map((task) => task.id));
   toArchive.forEach((task) => {
-    task.archived = true;
+    markTaskAsArchived(task);
   });
 
   if (activeTaskId && archivedIds.has(activeTaskId)) {
@@ -4478,6 +5895,7 @@ function archiveCompletedTasks() {
 
   renderBoard();
   renderTaskSidebar();
+  if (subheaderView === 'overview') renderProjectOverview();
 }
 
 function boardColumnSummary() {
@@ -6059,7 +7477,7 @@ function getDropTarget(clientX, clientY) {
     status: col.dataset.drop,
     insertIndex,
     cards,
-    createBtn: col.querySelector('.create-task-btn'),
+    createBtn: col.querySelector('.create-task-btn, .overview-kanban-new-task'),
   };
 }
 
@@ -6081,11 +7499,11 @@ function updateDropIndicator(clientX, clientY) {
   let y;
 
   if (cards.length === 0) {
-    y = colRect.top + inset;
+    y = createBtn
+      ? createBtn.getBoundingClientRect().bottom + gapHalf
+      : colRect.top + inset;
   } else if (insertIndex < cards.length) {
     y = cards[insertIndex].getBoundingClientRect().top - gapHalf;
-  } else if (createBtn) {
-    y = createBtn.getBoundingClientRect().top - gapHalf;
   } else {
     y = cards[cards.length - 1].getBoundingClientRect().bottom + gapHalf;
   }
@@ -6103,7 +7521,10 @@ function insertTaskAtColumnPosition(task, status, insertIndex) {
   tasks.splice(taskIdx, 1);
   task.status = status;
 
-  const column = tasksForBoard().filter((t) => t.status === status);
+  const columnSource = (subheaderView === 'overview' && overviewLayout === 'status')
+    ? overviewTasksForStatusBoard()
+    : tasksForBoard();
+  const column = columnSource.filter((t) => t.status === status);
   const idx = Math.max(0, Math.min(insertIndex, column.length));
 
   if (column.length === 0) {
@@ -6168,6 +7589,7 @@ function endCardDrag(e) {
 
   if (!taskId || !dropTarget) {
     renderBoard();
+    if (subheaderView === 'overview') renderProjectOverview();
     return;
   }
 
@@ -6182,7 +7604,7 @@ function endCardDrag(e) {
   if (oldStatus !== status) {
     syncReviewReason(task);
     if (status === 'in-progress') {
-      if (oldStatus === 'review') {
+      if (oldStatus === 'review' || oldStatus === 'pr-review') {
         restartTaskWork(task);
       } else {
         beginTaskSimulation(task);
@@ -6206,50 +7628,19 @@ function endCardDrag(e) {
   }
 
   renderBoard();
+  if (subheaderView === 'overview') renderProjectOverview();
 }
 
-function initCardDrag(card, task) {
-  let startX = 0;
-  let startY = 0;
-  let dragging = false;
+function initCardDrag(card, task, { onOpen } = {}) {
+  const open = typeof onOpen === 'function' ? onOpen : openTaskDetail;
 
-  const onPointerMove = (e) => {
-    if (!dragging) {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (Math.hypot(dx, dy) < 6) return;
-      dragging = true;
-      beginCardDrag(card, task, e);
-    }
-    if (!dragState) return;
-    positionDragGhost(e);
-    updateDropIndicator(e.clientX, e.clientY);
-    scheduleLinkUpdate();
-  };
-
-  const onPointerUp = (e) => {
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerUp);
-
-    if (dragging) {
-      endCardDrag(e);
-    } else {
-      openTaskDetail(task.id);
-    }
-  };
-
-  card.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
+  card.addEventListener('click', (e) => {
     if (e.target.closest('.task-card-play')) return;
-
-    startX = e.clientX;
-    startY = e.clientY;
-    dragging = false;
-
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-    document.addEventListener('pointercancel', onPointerUp);
+    if (e.target.closest('.task-card-actions')) return;
+    if (e.target.closest('.task-card-edit-title')) return;
+    if (e.target.closest('.task-card-title-input')) return;
+    if (card.classList.contains('is-editing-title')) return;
+    open(task.id);
   });
 }
 
@@ -6265,47 +7656,37 @@ function initTaskLinks() {
   });
 }
 
-function createTaskCard(task) {
+function createTaskCard(task, { onOpen, showProject = false, showWorktree = true } = {}) {
   const isClosed = task.status === 'closed';
-  const isInProgress = task.status === 'in-progress';
-  const isReview = task.status === 'review';
-  const hasMeta = task.prs > 0 || task.commits > 0;
-  const reviewMeta = isReview ? getReviewReasonMeta(task) : null;
+  const isReview = task.status === 'review' || task.status === 'pr-review';
+  const footerAction = taskCardFooterActionHtml(task);
 
   const card = document.createElement('div');
   card.className = `task-card${isClosed ? ' closed' : ''}${isReview ? ` review-${task.reviewReason}` : ''}`;
   card.dataset.id = task.id;
 
-  let icon = '';
-  if (isClosed) {
-    icon = `<span class="task-card-icon">${iconHtml('check-check', { size: 14, className: 'lucide-icon lucide-teal' })}</span>`;
-  } else if (isInProgress) {
-    icon = `<span class="task-card-icon">${iconHtml('loader', { size: 14, className: 'lucide-icon lucide-spin' })}</span>`;
-  } else if (isReview && reviewMeta) {
-    icon = `<span class="task-card-icon">${iconHtml(reviewMeta.icon, { size: 14, className: `lucide-icon ${reviewMeta.iconClass}` })}</span>`;
-  }
-
-  let meta = '';
-  if (hasMeta) {
-    meta = `<div class="task-card-meta">
-      ${task.prs ? `<span class="meta-pr">${iconHtml('git-pull-request', { size: 11, className: 'meta-icon' })} ${task.prs} PR</span>` : ''}
-      ${task.commits ? `<span class="meta-commit">${iconHtml('git-commit', { size: 11, className: 'meta-icon' })} ${task.commits} commit${task.commits > 1 ? 's' : ''}</span>` : ''}
-    </div>`;
-  }
-
   card.innerHTML = `
     <div class="task-card-header">
-      <div class="task-card-title">${escapeHtml(task.title)}</div>
-      ${icon}
-    </div>
-    ${taskCardTagsHtml(task)}
-    ${isReview ? reviewStatusCardHtml(task) : ''}
-    <div class="task-card-footer">
-      <div class="task-card-footer-actions">
-        ${meta}
-        ${taskCardFooterActionHtml(task)}
+      <div class="task-card-title-row">
+        <div class="task-card-title">
+          <span class="task-card-title-text">${escapeHtml(task.title)}</span><button type="button" class="task-card-edit-title" aria-label="Edit task name">${iconHtml('pencil', { size: 12, className: 'lucide-icon' })}</button>
+        </div>
+      </div>
+      <div class="task-card-header-end">
+        ${taskCardStatusEndHtml(task)}
+        <div class="task-card-actions">
+          <button type="button" class="task-card-menu-btn" aria-label="Task options" aria-haspopup="menu" aria-expanded="false">
+            ${iconHtml('ellipsis-vertical', { size: 14, className: 'lucide-icon lucide-muted' })}
+          </button>
+          <div class="task-card-menu" hidden role="menu">
+            <button type="button" class="task-card-menu-option" role="menuitem" data-action="rename">Rename</button>
+            <button type="button" class="task-card-menu-option" role="menuitem" data-action="archive">Archive</button>
+          </div>
+        </div>
       </div>
     </div>
+    ${taskCardSecondaryHtml(task, { showProject, showWorktree })}
+    ${footerAction ? `<div class="task-card-footer"><div class="task-card-footer-actions">${footerAction}</div></div>` : ''}
   `;
 
   const playBtn = card.querySelector('.task-card-play');
@@ -6315,9 +7696,116 @@ function createTaskCard(task) {
   });
   playBtn?.addEventListener('pointerdown', (e) => e.stopPropagation());
 
-  initCardDrag(card, task);
+  bindTaskCardChrome(card, task);
+  initCardDrag(card, task, { onOpen });
 
   return card;
+}
+
+function bindTaskCardChrome(card, task) {
+  const actions = card.querySelector('.task-card-actions');
+  const menuBtn = card.querySelector('.task-card-menu-btn');
+  const menu = card.querySelector('.task-card-menu');
+  const editBtn = card.querySelector('.task-card-edit-title');
+
+  menuBtn?.addEventListener('pointerdown', (e) => e.stopPropagation());
+  menu?.addEventListener('pointerdown', (e) => e.stopPropagation());
+  editBtn?.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+  menuBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = openSidebarItemMenu?.wrap === actions;
+    closeSidebarItemMenus();
+    closeRichSelects();
+    closeProjectEmptyMenus();
+    if (!isOpen && menu && actions) {
+      menu.hidden = false;
+      menuBtn.setAttribute('aria-expanded', 'true');
+      actions.classList.add('is-open');
+      openSidebarItemMenu = { wrap: actions, trigger: menuBtn, menu };
+    }
+  });
+
+  menu?.addEventListener('click', (e) => {
+    const option = e.target.closest('[data-action]');
+    if (!option) return;
+    e.stopPropagation();
+    closeSidebarItemMenus();
+    if (option.dataset.action === 'rename') startTaskCardTitleEdit(card, task);
+    if (option.dataset.action === 'archive') archiveSidebarTask(task.id);
+  });
+
+  editBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeSidebarItemMenus();
+    startTaskCardTitleEdit(card, task);
+  });
+}
+
+function startTaskCardTitleEdit(card, task) {
+  const titleRow = card.querySelector('.task-card-title-row');
+  const titleEl = card.querySelector('.task-card-title');
+  const titleText = card.querySelector('.task-card-title-text');
+  if (!titleRow || !titleEl || titleRow.querySelector('.task-card-title-input')) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'task-card-title-input';
+  input.value = task.title;
+  input.setAttribute('aria-label', 'Edit task name');
+
+  titleEl.hidden = true;
+  titleRow.appendChild(input);
+  titleRow.classList.add('is-editing');
+  card.classList.add('is-editing-title');
+
+  const finish = (save) => {
+    if (!input.isConnected) return;
+    const next = input.value.trim();
+    input.remove();
+    titleEl.hidden = false;
+    titleRow.classList.remove('is-editing');
+    card.classList.remove('is-editing-title');
+
+    if (save && next && next !== task.title) {
+      applyTaskTitle(task, next);
+    }
+    if (titleText) titleText.textContent = task.title;
+    else titleEl.textContent = task.title;
+  };
+
+  input.addEventListener('pointerdown', (e) => e.stopPropagation());
+  input.addEventListener('click', (e) => e.stopPropagation());
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      finish(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener('blur', () => finish(true));
+
+  requestAnimationFrame(() => {
+    input.focus();
+    input.select();
+  });
+}
+
+function applyTaskTitle(task, title) {
+  task.title = title;
+  if (activeTaskId === task.id) {
+    $('#task-detail-title').textContent = task.title;
+    updateChatComposeTitles();
+  }
+  const previewTitle = $('#overview-task-preview-title');
+  if (overviewPreviewTaskId === task.id && previewTitle) {
+    previewTitle.textContent = task.title;
+  }
+  renderTaskSidebar();
+  renderAppModeTabBadges();
 }
 
 /* ── Drag & Drop ── */
@@ -6991,7 +8479,7 @@ function processKanbanCommand(text) {
     const title = match[1];
     let status = match[2].toLowerCase().replace(/\s+/g, '-');
     if (status === 'in') status = 'in-progress';
-    if (!['backlog', 'in-progress', 'review', 'closed'].includes(status)) status = 'backlog';
+    if (!['backlog', 'in-progress', 'review', 'pr-review', 'closed'].includes(status)) status = 'backlog';
     return createTaskFromChat(title, status);
   }
 
@@ -7001,7 +8489,7 @@ function processKanbanCommand(text) {
     let status = match[2].toLowerCase().replace(/\s+/g, '-');
     if (status === 'in') status = 'in-progress';
     const task = tasks.find((t) => t.title.toLowerCase().includes(titleQuery));
-    if (task && ['backlog', 'in-progress', 'review', 'closed'].includes(status)) {
+    if (task && ['backlog', 'in-progress', 'review', 'pr-review', 'closed'].includes(status)) {
       task.status = status;
       syncReviewReason(task);
       return {
@@ -7722,31 +9210,26 @@ function ensureWorkTarget(task) {
 function updateTaskCardStats(task) {
   const card = document.querySelector(`.task-card[data-id="${task.id}"]`);
   if (!card) return;
-  const el = card.querySelector('.task-card-stats');
-  if (!el) return;
-  el.innerHTML = taskCardStatsHtml(task);
+
+  const secondary = card.querySelector('.task-card-secondary');
+  if (!secondary) return;
+
+  const diffPill = secondary.querySelector('.task-card-pill--diff');
+  if (shouldShowTaskCardDiffPill(task)) {
+    const html = taskCardDiffPillHtml(task);
+    if (diffPill) diffPill.outerHTML = html;
+    else secondary.insertAdjacentHTML('beforeend', html);
+  } else if (diffPill) {
+    diffPill.remove();
+  }
 }
 
 function updateTaskCardMeta(task) {
   const card = document.querySelector(`.task-card[data-id="${task.id}"]`);
   if (!card) return;
-  const footerDiv = card.querySelector('.task-card-footer-actions');
-  if (!footerDiv) return;
 
-  const hasMeta = task.prs > 0 || task.commits > 0;
-  let metaEl = footerDiv.querySelector('.task-card-meta');
-  if (!hasMeta) return;
-
-  if (!metaEl) {
-    metaEl = document.createElement('div');
-    metaEl.className = 'task-card-meta';
-    const actionEl = footerDiv.querySelector('.task-card-stats, .task-card-play');
-    footerDiv.insertBefore(metaEl, actionEl);
-  }
-
-  metaEl.innerHTML = `
-    ${task.prs ? `<span class="meta-pr">${iconHtml('git-pull-request', { size: 11, className: 'meta-icon' })} ${task.prs} PR</span>` : ''}
-    ${task.commits ? `<span class="meta-commit">${iconHtml('git-commit', { size: 11, className: 'meta-icon' })} ${task.commits} commit${task.commits > 1 ? 's' : ''}</span>` : ''}`;
+  const gitPill = card.querySelector('.task-card-pill--git');
+  if (gitPill) gitPill.outerHTML = taskCardGitPillHtml(task);
 }
 
 function tickInProgressStats() {
@@ -8329,20 +9812,32 @@ function renameSidebarTask(taskId) {
   const trimmed = nextTitle.trim();
   if (!trimmed || trimmed === task.title) return;
 
-  task.title = trimmed;
-  if (activeTaskId === task.id) {
-    $('#task-detail-title').textContent = task.title;
-    updateChatComposeTitles();
-  }
+  applyTaskTitle(task, trimmed);
   renderBoard();
-  renderTaskSidebar();
+  if (subheaderView === 'overview') renderProjectOverview();
+}
+
+function markTaskAsArchived(task) {
+  if (!task || task.archived) return false;
+  task.archived = true;
+  if (!task.archiveSummary?.length) {
+    task.archiveSummary = getArchivedTaskSummary(task);
+  }
+  if (!task.archivePrGitStatus) {
+    task.archivePrGitStatus = task.prs
+      ? (task.status === 'closed' ? 'Merged' : 'Closed')
+      : 'No PR';
+  }
+  return true;
 }
 
 function archiveSidebarTask(taskId) {
   const task = getTask(taskId);
-  if (!task || task.archived) return;
+  if (!markTaskAsArchived(task)) return;
 
-  task.archived = true;
+  if (overviewPreviewTaskId === task.id) {
+    closeOverviewTaskPreview();
+  }
 
   if (activeTaskId === task.id) {
     const next = tasksForTaskSidebar().find((t) => !t.archived && t.id !== task.id);
@@ -8362,6 +9857,7 @@ function archiveSidebarTask(taskId) {
   renderBoard();
   renderTaskSidebar();
   renderAppModeTabBadges();
+  if (subheaderView === 'overview') renderProjectOverview();
 }
 
 function initSidebarItemMenus(sidebar) {
@@ -8409,9 +9905,76 @@ function bindSidebarItemEvents(sidebar) {
   initSidebarItemMenus(sidebar);
 }
 
+function sidebarSectionLeadingHtml(section) {
+  if (section.icon) {
+    return `<span class="sidebar-leading">${iconHtml(section.icon, { size: 12, className: 'lucide-icon' })}</span>`;
+  }
+  return `<span class="sidebar-leading"><span class="status-dot ${section.dot}"></span></span>`;
+}
+
+function sidebarSectionHtml(section, sectionTasks, mode, { itemHtml } = {}) {
+  const items = sectionTasks.map((task) => (itemHtml ? itemHtml(task) : sidebarTaskHtml(task))).join('');
+  const isCollapsed = sidebarSectionCollapsed[mode]?.[section.id] === true;
+  const archiveBtn = section.showArchiveBtn
+    ? `<button type="button" class="sidebar-archive-btn" aria-label="Archive completed tasks">
+        ${iconHtml('archive', { size: 12, className: 'lucide-icon' })}
+      </button>`
+    : '';
+  const chevron = `<span class="sidebar-section-chevron">
+      ${iconHtml('chevron-down', { size: 12, className: 'lucide-icon' })}
+    </span>`;
+  const collapsedClass = isCollapsed ? ' collapsed' : '';
+  const archiveClass = section.id === 'archive' ? ' sidebar-section--archive' : '';
+
+  return `
+    <div class="sidebar-section${archiveClass}">
+      ${section.id === 'archive' ? '' : '<div class="sidebar-section-divider" aria-hidden="true"></div>'}
+      <div class="sidebar-section-header${collapsedClass}" data-section="${section.id}" data-mode="${mode}" role="button" tabindex="0" aria-expanded="${!isCollapsed}">
+        ${sidebarSectionLeadingHtml(section)}
+        <span class="sidebar-section-label">
+          ${section.label}
+          <span class="column-count">${sectionTasks.length}</span>
+        </span>
+        <span class="sidebar-section-trailing">
+          ${chevron}
+          ${archiveBtn}
+        </span>
+      </div>
+      <div class="sidebar-section-body${collapsedClass}">${items}</div>
+    </div>`;
+}
+
+function bindSidebarSectionEvents(sidebar) {
+  sidebar.querySelectorAll('.sidebar-archive-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      archiveCompletedTasks();
+    });
+  });
+
+  sidebar.querySelectorAll('.sidebar-section-header[data-section]').forEach((header) => {
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('.sidebar-archive-btn')) return;
+      toggleSidebarSection(header.dataset.section, header.dataset.mode);
+    });
+    header.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSidebarSection(header.dataset.section, header.dataset.mode);
+      }
+    });
+  });
+}
+
 function renderChatSidebar(sidebar) {
-  const chats = tasksForTaskSidebar().filter((task) => !task.archived);
+  const allChats = tasksForTaskSidebar();
+  const chats = allChats.filter((task) => !task.archived);
+  const archived = allChats.filter((task) => task.archived);
   const itemsHtml = chats.map((task) => sidebarChatItemHtml(task)).join('');
+  const archiveSection = SIDEBAR_SECTIONS.chat[0];
+  const archiveHtml = sidebarSectionHtml(archiveSection, archived, 'chat', {
+    itemHtml: sidebarChatItemHtml,
+  });
 
   sidebar.innerHTML = `
     <div class="sidebar-create-wrap">
@@ -8420,13 +9983,17 @@ function renderChatSidebar(sidebar) {
         New chat
       </button>
     </div>
-    <div class="sidebar-chat-list">${itemsHtml}</div>`;
+    <div class="sidebar-scroll">
+      <div class="sidebar-chat-list">${itemsHtml}</div>
+    </div>
+    <div class="sidebar-footer">${archiveHtml}</div>`;
 
   initIcons(sidebar);
 
   sidebar.querySelector('#sidebar-new-chat-btn')?.addEventListener('click', startNewConversation);
 
   bindSidebarItemEvents(sidebar);
+  bindSidebarSectionEvents(sidebar);
 }
 
 function renderTaskSidebar() {
@@ -8441,7 +10008,6 @@ function renderTaskSidebar() {
   const mode = activeAppMode === 'code' ? 'code' : 'design';
   const sections = SIDEBAR_SECTIONS[mode];
   const visibleTasks = tasksForTaskSidebar();
-  const isAccordion = true;
 
   const activeTasksHtml = mode === 'code'
     ? visibleTasks
@@ -8450,44 +10016,22 @@ function renderTaskSidebar() {
       .join('')
     : '';
 
-  const sectionsHtml = sections
+  const mainSections = sections.filter((section) => section.id !== 'archive');
+  const archiveSection = sections.find((section) => section.id === 'archive');
+
+  const sectionsHtml = mainSections
     .map((section) => {
       const sectionTasks = visibleTasks.filter((task) => getSidebarBucket(task, mode) === section.id);
-      const items = sectionTasks.map((task) => sidebarTaskHtml(task)).join('');
-      const isCollapsed = isAccordion && sidebarSectionCollapsed[mode][section.id] === true;
-      const archiveBtn = section.showArchiveBtn
-        ? `<button type="button" class="sidebar-archive-btn" aria-label="Archive completed tasks">
-            ${iconHtml('archive', { size: 12, className: 'lucide-icon' })}
-          </button>`
-        : '';
-      const chevron = isAccordion
-        ? `<span class="sidebar-section-chevron">
-            ${iconHtml('chevron-down', { size: 12, className: 'lucide-icon' })}
-          </span>`
-        : '';
-      const collapsedClass = isCollapsed ? ' collapsed' : '';
-      const headerAttrs = isAccordion
-        ? ` data-section="${section.id}" data-mode="${mode}" role="button" tabindex="0" aria-expanded="${!isCollapsed}"`
-        : '';
-
-      return `
-        <div class="sidebar-section">
-          <div class="sidebar-section-divider" aria-hidden="true"></div>
-          <div class="sidebar-section-header${collapsedClass}"${headerAttrs}>
-            <span class="sidebar-leading"><span class="status-dot ${section.dot}"></span></span>
-            <span class="sidebar-section-label">
-              ${section.label}
-              <span class="column-count">${sectionTasks.length}</span>
-            </span>
-            <span class="sidebar-section-trailing">
-              ${chevron}
-              ${archiveBtn}
-            </span>
-          </div>
-          <div class="sidebar-section-body${collapsedClass}">${items}</div>
-        </div>`;
+      return sidebarSectionHtml(section, sectionTasks, mode);
     })
     .join('');
+
+  const archiveTasks = archiveSection
+    ? visibleTasks.filter((task) => getSidebarBucket(task, mode) === 'archive')
+    : [];
+  const archiveHtml = archiveSection
+    ? sidebarSectionHtml(archiveSection, archiveTasks, mode)
+    : '';
 
   const sidebarActionHtml = activeAppMode === 'code'
     ? `<div class="sidebar-create-wrap">
@@ -8505,8 +10049,11 @@ function renderTaskSidebar() {
 
   sidebar.innerHTML = `
     ${sidebarActionHtml}
-    ${activeTasksHtml ? `<div class="sidebar-active-tasks">${activeTasksHtml}</div>` : ''}
-    ${sectionsHtml}`;
+    <div class="sidebar-scroll">
+      ${activeTasksHtml ? `<div class="sidebar-active-tasks">${activeTasksHtml}</div>` : ''}
+      ${sectionsHtml}
+    </div>
+    <div class="sidebar-footer">${archiveHtml}</div>`;
 
   initIcons(sidebar);
 
@@ -8522,27 +10069,7 @@ function renderTaskSidebar() {
     });
   });
 
-  sidebar.querySelectorAll('.sidebar-archive-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      archiveCompletedTasks();
-    });
-  });
-
-  if (isAccordion) {
-    sidebar.querySelectorAll('.sidebar-section-header[data-section]').forEach((header) => {
-      header.addEventListener('click', (e) => {
-        if (e.target.closest('.sidebar-archive-btn')) return;
-        toggleSidebarSection(header.dataset.section, header.dataset.mode);
-      });
-      header.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggleSidebarSection(header.dataset.section, header.dataset.mode);
-        }
-      });
-    });
-  }
+  bindSidebarSectionEvents(sidebar);
 }
 
 function toggleSidebarSection(sectionId, mode) {
@@ -8917,6 +10444,16 @@ function initEvents() {
   });
 
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overviewArchiveOpen) {
+      e.preventDefault();
+      setOverviewArchiveOpen(false);
+      return;
+    }
+    if (e.key === 'Escape' && overviewPreviewTaskId) {
+      e.preventDefault();
+      closeOverviewTaskPreview();
+      return;
+    }
     if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
       if (activeAppMode === 'code') startNewCodeTask();
       else openCreateTaskModal();
@@ -8937,9 +10474,20 @@ function initTooltips() {
   if (document.documentElement.dataset.tooltipsBound) return;
   document.documentElement.dataset.tooltipsBound = 'true';
 
+  const PILL_TOOLTIP_DELAY_MS = 500;
   let activeAnchor = null;
+  let pendingAnchor = null;
+  let showTimer = null;
+
+  const clearShowTimer = () => {
+    if (showTimer == null) return;
+    window.clearTimeout(showTimer);
+    showTimer = null;
+  };
 
   const hideTooltip = () => {
+    clearShowTimer();
+    pendingAnchor = null;
     activeAnchor = null;
     tooltip.hidden = true;
   };
@@ -8964,9 +10512,37 @@ function initTooltips() {
     tooltip.style.left = `${left}px`;
   };
 
-  const showTooltip = (anchor) => {
-    activeAnchor = anchor;
-    positionTooltip(anchor);
+  const showTooltip = (anchor, { immediate = false } = {}) => {
+    if (activeAnchor === anchor) {
+      positionTooltip(anchor);
+      return;
+    }
+    if (pendingAnchor === anchor && showTimer != null) return;
+
+    clearShowTimer();
+    if (activeAnchor && activeAnchor !== anchor) {
+      tooltip.hidden = true;
+      activeAnchor = null;
+    }
+
+    const delay = !immediate && anchor.classList.contains('task-card-pill')
+      ? PILL_TOOLTIP_DELAY_MS
+      : 0;
+
+    if (delay === 0) {
+      pendingAnchor = null;
+      activeAnchor = anchor;
+      positionTooltip(anchor);
+      return;
+    }
+
+    pendingAnchor = anchor;
+    showTimer = window.setTimeout(() => {
+      showTimer = null;
+      pendingAnchor = null;
+      activeAnchor = anchor;
+      positionTooltip(anchor);
+    }, delay);
   };
 
   document.addEventListener('mouseover', (e) => {
@@ -8975,9 +10551,9 @@ function initTooltips() {
   });
 
   document.addEventListener('mouseout', (e) => {
-    if (!activeAnchor) return;
     const anchor = e.target.closest('[data-tooltip]');
-    if (!anchor || anchor !== activeAnchor) return;
+    if (!anchor) return;
+    if (activeAnchor !== anchor && pendingAnchor !== anchor) return;
     const next = e.relatedTarget;
     if (next && anchor.contains(next)) return;
     hideTooltip();
@@ -8985,7 +10561,7 @@ function initTooltips() {
 
   document.addEventListener('focusin', (e) => {
     const anchor = e.target.closest('[data-tooltip]');
-    if (anchor) showTooltip(anchor);
+    if (anchor) showTooltip(anchor, { immediate: true });
   });
 
   document.addEventListener('focusout', (e) => {
@@ -9103,6 +10679,7 @@ function init() {
   hydrateReviewWaitingTimes();
   initInProgressSimulation();
   initInProgressStatsTick();
+  startTaskCardSpinners();
   initTaskChat();
   initDesignChat();
   initRichSelects();
@@ -9126,22 +10703,9 @@ function init() {
   initEvents();
   renderBoardSubheader();
 
-  if (activeAppMode === 'code') {
-    const defaultTaskId = getDefaultTaskId();
-    if (defaultTaskId) openTaskDetail(defaultTaskId);
-    else {
-      renderBoard();
-      updateProjectEmptyState();
-    }
-  } else if (activeAppMode === 'design') {
-    renderTaskSidebar();
-    const firstId = getFirstTaskIdForProject();
-    if (firstId) openTaskDetail(firstId);
-    else {
-      renderDesignChat();
-      renderDesignArtifact(null);
-      updateProjectEmptyState();
-    }
+  if (activeAppMode === 'code' || activeAppMode === 'design') {
+    modeOpenedOnce[activeAppMode] = true;
+    setSubheaderView('overview');
   } else {
     renderTaskSidebar();
     const firstId = getFirstTaskIdForProject();

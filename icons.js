@@ -3,6 +3,7 @@ import {
   Menu,
   ChevronDown,
   ChevronLeft,
+  ChevronUp,
   User,
   LayoutGrid,
   SquareTerminal,
@@ -36,14 +37,19 @@ import {
   Moon,
   EllipsisVertical,
   Archive,
+  Search,
+  Pencil,
   Mic,
   Laptop,
+  PanelLeftClose,
+  PanelRightOpen,
 } from 'lucide';
 
 const ICONS = {
   menu: Menu,
   'chevron-down': ChevronDown,
   'chevron-left': ChevronLeft,
+  'chevron-up': ChevronUp,
   user: User,
   'layout-grid': LayoutGrid,
   'square-terminal': SquareTerminal,
@@ -77,8 +83,12 @@ const ICONS = {
   moon: Moon,
   'ellipsis-vertical': EllipsisVertical,
   archive: Archive,
+  search: Search,
+  pencil: Pencil,
   mic: Mic,
   laptop: Laptop,
+  'panel-left-close': PanelLeftClose,
+  'panel-right-open': PanelRightOpen,
 };
 
 const defaults = { 'stroke-width': 2 };
