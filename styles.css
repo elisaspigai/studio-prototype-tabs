@@ -3373,13 +3373,7 @@ body.is-resizing-overview-preview {
   transition: opacity 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
 }
 
-.overview-status-stage.is-preview-open .kanban-column.is-preview-focus .task-card.is-preview-dim {
-  opacity: 0.4;
-}
 
-.overview-status-stage.is-preview-open .kanban-column.is-preview-focus .task-card.is-preview-dim:hover {
-  opacity: 0.75;
-}
 
 .overview-status-stage.is-preview-open .task-card.is-preview-focus {
   opacity: 1;

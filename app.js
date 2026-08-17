@@ -4283,7 +4283,7 @@ function initOverviewArchivePanel(container) {
 function clearOverviewPreviewFocus() {
   const board = $('#overview-kanban-board');
   $$('#overview-kanban-board .task-card').forEach((card) => {
-    card.classList.remove('is-preview-focus', 'is-preview-dim');
+    card.classList.remove('is-preview-focus');
   });
   $$('#overview-kanban-board .kanban-column').forEach((col) => {
     col.classList.remove('is-preview-focus', 'is-preview-hidden');
@@ -4412,9 +4412,7 @@ function prepareOverviewPreviewLayout(taskId) {
   stage.dataset.focusStatus = focusStatus;
 
   $$('#overview-kanban-board .task-card').forEach((card) => {
-    const isFocus = card.dataset.id === taskId;
-    card.classList.toggle('is-preview-focus', isFocus);
-    card.classList.toggle('is-preview-dim', !isFocus);
+    card.classList.toggle('is-preview-focus', card.dataset.id === taskId);
   });
 
   const columns = [...board.querySelectorAll('.kanban-column')];
@@ -4602,7 +4600,7 @@ function closeOverviewTaskPreview() {
   if (board) board.style.transform = 'translateX(0px)';
 
   $$('#overview-kanban-board .task-card').forEach((card) => {
-    card.classList.remove('is-preview-focus', 'is-preview-dim');
+    card.classList.remove('is-preview-focus');
   });
   $$('#overview-kanban-board .kanban-column').forEach((col) => {
     col.classList.remove('is-preview-focus', 'is-preview-hidden');
