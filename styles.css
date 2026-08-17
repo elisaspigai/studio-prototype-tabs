@@ -278,6 +278,10 @@ html, body {
   gap: 6px;
 }
 
+.design-back-btn[hidden] {
+  display: none !important;
+}
+
 #view-task[data-app-mode="chat"] .task-subheader-stats,
 #view-task[data-app-mode="chat"] .task-subheader-right {
   display: none !important;
@@ -538,7 +542,10 @@ html, body {
 }
 
 .repo-tab {
-  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -710,7 +717,8 @@ html, body {
 .subheader-meta-btn {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-elevated);
   color: var(--text-secondary);
@@ -861,8 +869,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 1px solid var(--border);
   background: var(--surface-subtle);
@@ -1531,6 +1539,56 @@ html, body {
   background: rgba(255, 95, 51, 0.1);
 }
 
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px 0;
+}
+
+.chat-attachments[hidden] {
+  display: none !important;
+}
+
+.chat-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  max-width: 100%;
+}
+
+.chat-attachment-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-attachment-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chat-attachment-remove:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
 .chat-compose-tools {
   display: flex;
   align-items: center;
@@ -1765,6 +1823,36 @@ html, body {
 }
 .app-tooltip[hidden] {
   display: none !important;
+}
+
+#diff-selection-popover {
+  position: absolute;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+}
+
+.diff-selection-popover-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.diff-selection-popover-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .column-body {
@@ -2109,9 +2197,6 @@ body.is-dragging-card .task-link-arrowhead {
 }
 
 .task-card-title {
-  display: flex;
-  align-items: center;
-  gap: 2px;
   flex: 1;
   min-width: 0;
   font-size: 12px;
@@ -2119,29 +2204,16 @@ body.is-dragging-card .task-link-arrowhead {
   line-height: 1.35;
 }
 
-.task-card-title-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.task-card-title-row:hover .task-card-title-text,
-.task-card-title-row.is-editing .task-card-title-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .task-card-edit-title {
   display: none;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 22px;
-  width: 22px;
-  height: 22px;
-  margin: 0;
+  position: relative;
+  width: 20px;
+  height: 0; /* zero line-box contribution: appearing on hover never changes line height */
+  margin: 0 0 0 4px;
   padding: 0;
+  vertical-align: baseline;
+  overflow: visible;
   border: none;
-  border-radius: 4px;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -2149,11 +2221,34 @@ body.is-dragging-card .task-link-arrowhead {
 
 .task-card-title-row:hover .task-card-edit-title,
 .task-card-title-row.is-editing .task-card-edit-title {
-  display: inline-flex;
+  display: inline-block;
+}
+
+/* Hover target + icon are painted out-of-flow, centered on the
+   zero-height anchor point (≈ x-height center of the title line) */
+.task-card-edit-title::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border-radius: 4px;
+}
+
+.task-card-edit-title .lucide-icon {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  transform: translate(-50%, -50%);
 }
 
 .task-card-edit-title:hover {
   color: var(--text-primary);
+}
+
+.task-card-edit-title:hover::before {
   background: var(--bg-hover);
 }
 

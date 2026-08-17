@@ -1387,6 +1387,7 @@ let overviewKanbanCompressed = false;
 let overviewArchiveOpen = false;
 let overviewArchiveQuery = '';
 let overviewPreviewColumnWidths = null;
+let overviewPreviewAttachments = [];
 const OVERVIEW_PREVIEW_ANIM_MS = 400;
 const OVERVIEW_KANBAN_COMPRESSED_WIDTH = 48;
 const OVERVIEW_PREVIEW_CHAT_MIN = 220;
@@ -2452,11 +2453,29 @@ function changesScopeTriggerLabel(filter, partition) {
   return 'All branch changes';
 }
 
-function renderChangesToolbar(bundle, commits, task) {
-  const branchEl = $('#diff-branch-name');
-  const trigger = $('#diff-commit-trigger');
-  const menu = $('#diff-commit-menu');
-  const totalsEl = $('#diff-change-totals');
+const CHANGES_TOOLBAR_IDS = {
+  toolbar: '#changes-toolbar',
+  branch: '#diff-branch-name',
+  trigger: '#diff-commit-trigger',
+  menu: '#diff-commit-menu',
+  byline: '#diff-commit-byline',
+  totals: '#diff-change-totals',
+};
+
+const OVERVIEW_CHANGES_TOOLBAR_IDS = {
+  toolbar: '#overview-changes-toolbar',
+  branch: '#overview-diff-branch-name',
+  trigger: '#overview-diff-commit-trigger',
+  menu: '#overview-diff-commit-menu',
+  byline: '#overview-diff-commit-byline',
+  totals: '#overview-diff-change-totals',
+};
+
+function renderChangesToolbar(bundle, commits, task, ids = CHANGES_TOOLBAR_IDS) {
+  const branchEl = $(ids.branch);
+  const trigger = $(ids.trigger);
+  const menu = $(ids.menu);
+  const totalsEl = $(ids.totals);
   const branchSelection = getBranchChangesSelection(bundle, commits);
   const partition = getWorkingTreePartition(bundle, task);
   const files = getFilesForChangesFilter(bundle, commits, task);
@@ -2466,7 +2485,7 @@ function renderChangesToolbar(bundle, commits, task) {
 
   if (branchEl) branchEl.textContent = bundle.branch;
 
-  const bylineEl = $('#diff-commit-byline');
+  const bylineEl = $(ids.byline);
   if (bylineEl) {
     if (activeChangesFilter === 'branch') {
       bylineEl.textContent = `${branchSelection.time} · ${branchSelection.range}`;
@@ -2567,7 +2586,7 @@ function renderChangesToolbar(bundle, commits, task) {
     menu.style.minWidth = '280px';
   }
 
-  initIcons($('#changes-toolbar'));
+  initIcons($(ids.toolbar));
 }
 
 function renderDiff() {
@@ -3388,7 +3407,7 @@ function overviewCodeStatsPillsHtml(stats) {
 }
 
 function getProjectFilterLabel() {
-  if (activeRepo.includes('all') || activeRepo.length === 0) return 'All projects';
+  if (activeRepo.includes('all') || activeRepo.length === 0) return 'All repositories';
   return projectLabel(activeRepo[0]);
 }
 
@@ -3634,6 +3653,17 @@ function overviewStatusKanbanHtml(boardTasks) {
         <div class="overview-task-preview-columns" id="overview-task-preview-columns">
           <div class="overview-task-preview-chat-col">
             <div class="chat-messages overview-task-preview-chat" id="overview-task-preview-chat"></div>
+            <div class="chat-input-area">
+              <div class="chat-compose">
+                <div class="chat-attachments" id="overview-task-preview-chat-attachments" hidden></div>
+                <div class="chat-input-wrap">
+                  <textarea id="overview-task-preview-chat-input" rows="1" placeholder="Ask anything…" autocomplete="off"></textarea>
+                  <button class="send-btn" type="button" data-send="overview-task-preview-chat" aria-label="Send">
+                    <span class="icon-slot" data-icon="arrow-up" data-size="16" data-icon-class="lucide-icon"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
           <div
             class="overview-preview-column-resizer overview-panel-resizer"
@@ -3653,6 +3683,21 @@ function overviewStatusKanbanHtml(boardTasks) {
             <div class="overview-work-content">
               <div class="overview-work-pane active" data-pane="changes">
                 <div class="changes-pane overview-work-changes-pane">
+                  <div class="changes-header" id="overview-changes-header" hidden>
+                    <div class="changes-toolbar" id="overview-changes-toolbar">
+                      <span class="icon-slot" data-icon="folder" data-size="14" data-icon-class="lucide-icon lucide-muted"></span>
+                      <span class="changes-branch-chip">
+                        <span class="icon-slot" data-icon="git-branch" data-size="12" data-icon-class="lucide-icon lucide-muted"></span>
+                        <span id="overview-diff-branch-name">main</span>
+                      </span>
+                      <div class="changes-commit-select-wrap" id="overview-diff-commit-select-wrap">
+                        <button type="button" class="changes-commit-trigger" id="overview-diff-commit-trigger" aria-haspopup="listbox" aria-expanded="false"></button>
+                        <div class="changes-commit-menu" id="overview-diff-commit-menu" hidden role="listbox" aria-label="Changes scope"></div>
+                      </div>
+                      <span class="changes-commit-byline" id="overview-diff-commit-byline"></span>
+                      <span class="changes-totals" id="overview-diff-change-totals"></span>
+                    </div>
+                  </div>
                   <div class="changes-body">
                     <div class="file-tree" id="overview-diff-file-tree"></div>
                     <div class="diff-viewer" id="overview-diff-viewer"></div>
@@ -3938,6 +3983,12 @@ function renderOverviewPreviewWork(task, previewRoot) {
     viewer.innerHTML = '';
 
     if (terminal) terminal.textContent = bundle.terminal;
+
+    const changesHeader = previewRoot.querySelector('#overview-changes-header');
+    if (changesHeader) changesHeader.hidden = task.status === 'backlog';
+    if (task.status !== 'backlog') {
+      renderChangesToolbar(bundle, commits, task, OVERVIEW_CHANGES_TOOLBAR_IDS);
+    }
 
     if (!files.length || task.status === 'backlog') {
       viewer.innerHTML = task.status === 'backlog'
@@ -4580,8 +4631,17 @@ function renderOverviewTaskPreview(task) {
   if (project) {
     project.textContent = getProjectRepoShortName(task.project || 'kimchi');
   }
-  if (chat) fillOverviewTaskPreviewChat(chat, task);
+  if (chat) {
+    fillOverviewTaskPreviewChat(chat, task);
+    chat.scrollTop = chat.scrollHeight;
+  }
   initIcons(preview);
+
+  const previewChatInput = $('#overview-task-preview-chat-input');
+  if (previewChatInput && !previewChatInput.dataset.bound) {
+    previewChatInput.dataset.bound = 'true';
+    initChatInput('overview-task-preview-chat-input', handleOverviewPreviewChat);
+  }
 }
 
 function closeOverviewTaskPreview() {
@@ -4636,6 +4696,10 @@ function openOverviewTaskPreview(taskId) {
 
   const wasOpen = stage.classList.contains('is-preview-open');
   overviewPreviewTaskId = taskId;
+  activeDiffFileIndex = 0;
+  activeDiffCommitIndex = 0;
+  activeChangesFilter = 'uncommitted';
+  clearOverviewPreviewAttachments();
   renderOverviewTaskPreview(task);
   initOverviewWorkTabs(preview);
   initOverviewPreviewColumnResizer(preview);
@@ -4695,6 +4759,16 @@ function bindOverviewTaskPreviewChrome(container) {
     if (e.target.closest('.overview-kanban-new-task')) return;
     if (e.target.closest('.overview-back-to-board')) return;
     closeOverviewTaskPreview();
+  });
+
+  initDiffCommitMenu({
+    wrap: container.querySelector('#overview-diff-commit-select-wrap'),
+    ids: OVERVIEW_CHANGES_TOOLBAR_IDS,
+    rerender: () => {
+      const previewTask = getTask(overviewPreviewTaskId);
+      const preview = $('#overview-task-preview');
+      if (previewTask && preview) renderOverviewPreviewWork(previewTask, preview);
+    },
   });
 }
 
@@ -4877,16 +4951,92 @@ function initDesignChat() {
   initChatInput('design-chat-input', handleDesignChat);
 }
 
-function initDiffCommitMenu() {
-  const wrap = $('#diff-commit-select-wrap');
+function initDiffSelectionPopover() {
+  let popover = null;
+  let debounceTimer = null;
+
+  const hide = () => {
+    if (popover) {
+      popover.remove();
+      popover = null;
+    }
+  };
+
+  const getSelectedCode = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const viewer = (container.nodeType === Node.ELEMENT_NODE
+      ? container.closest('.diff-viewer')
+      : container.parentElement?.closest('.diff-viewer'));
+    if (!viewer) return null;
+    const text = selection.toString().trim();
+    if (!text) return null;
+
+    const fragment = range.cloneContents();
+    const pathEl = viewer.querySelector('.diff-split-path');
+    const path = pathEl ? pathEl.textContent.trim() : 'file';
+    const lineNumbers = [...fragment.querySelectorAll('.ln')]
+      .map((el) => parseInt(el.textContent.trim(), 10))
+      .filter((n) => Number.isFinite(n));
+    const startLine = lineNumbers.length ? Math.min(...lineNumbers) : null;
+    const endLine = lineNumbers.length ? Math.max(...lineNumbers) : null;
+
+    return { text, range, viewer, path, startLine, endLine };
+  };
+
+  const show = ({ range, text, path, startLine, endLine }) => {
+    hide();
+    popover = document.createElement('div');
+    popover.id = 'diff-selection-popover';
+    popover.innerHTML = `
+      <button type="button" class="diff-selection-popover-btn">
+        ${iconHtml('message-circle', { size: 12, className: 'lucide-icon' })}
+        Send to chat
+      </button>
+    `;
+    document.body.appendChild(popover);
+    initIcons(popover);
+
+    const rect = range.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    let top = rect.top - popoverRect.height - 8 + window.scrollY;
+    let left = rect.left + rect.width / 2 - popoverRect.width / 2 + window.scrollX;
+    if (top < 8) top = rect.bottom + 8 + window.scrollY;
+    popover.style.top = `${Math.max(8, top)}px`;
+    popover.style.left = `${Math.max(8, Math.min(window.innerWidth - popoverRect.width - 8, left))}px`;
+
+    popover.querySelector('button').addEventListener('click', () => {
+      addOverviewPreviewAttachment({ path, startLine, endLine, code: text });
+      hide();
+      window.getSelection()?.removeAllRanges();
+    });
+  };
+
+  document.addEventListener('selectionchange', () => {
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      const selected = getSelectedCode();
+      if (!selected) hide();
+      else show(selected);
+    }, 100);
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (popover && !popover.contains(e.target)) hide();
+  });
+}
+
+function initDiffCommitMenu({ wrap, ids = CHANGES_TOOLBAR_IDS, rerender = renderDiff } = {}) {
   if (!wrap || wrap.dataset.bound) return;
   wrap.dataset.bound = 'true';
 
   wrap.addEventListener('click', (e) => {
-    const trigger = e.target.closest('#diff-commit-trigger');
+    const trigger = e.target.closest('.changes-commit-trigger');
     if (trigger) {
       e.stopPropagation();
-      const menu = $('#diff-commit-menu');
+      const menu = $(ids.menu);
       if (!menu) return;
       const open = menu.hidden;
       menu.hidden = !open;
@@ -4905,17 +5055,17 @@ function initDiffCommitMenu() {
         activeChangesFilter = scope;
       }
       activeDiffFileIndex = 0;
-      const menu = $('#diff-commit-menu');
-      const triggerBtn = $('#diff-commit-trigger');
+      const menu = $(ids.menu);
+      const triggerBtn = $(ids.trigger);
       if (menu) menu.hidden = true;
       if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
-      renderDiff();
+      rerender();
     }
   });
 
   document.addEventListener('click', () => {
-    const menu = $('#diff-commit-menu');
-    const triggerBtn = $('#diff-commit-trigger');
+    const menu = $(ids.menu);
+    const triggerBtn = $(ids.trigger);
     if (menu) menu.hidden = true;
     if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
   });
@@ -5891,30 +6041,6 @@ function releaseBlockedTasks(closedTaskId) {
   getTasksBlockedBy(closedTaskId)
     .filter((task) => task.status === 'backlog')
     .forEach((task) => moveTaskToInProgress(task));
-}
-
-function closeTask(task) {
-  if (!task || task.status === 'closed') return;
-
-  task.status = 'closed';
-  syncReviewReason(task);
-  clearWorkTarget(task);
-
-  if (activeSimulatedTaskId === task.id) {
-    activeSimulatedTaskId = null;
-    assignNextSimulatedTask({ delay: 0 });
-  }
-  if (pendingCompletionTaskId === task.id) pendingCompletionTaskId = null;
-
-  if (activeTaskId === task.id) {
-    const badge = $('#task-status-badge');
-    badge.textContent = STATUS_LABELS.closed;
-    badge.className = 'status-badge closed';
-    renderTaskSidebar();
-  }
-
-  releaseBlockedTasks(task.id);
-  renderBoard();
 }
 
 function moveTaskToInProgress(task) {
@@ -9845,6 +9971,95 @@ function generateTaskResponse(text, task) {
   }];
 }
 
+function formatOverviewAttachmentLabel(attachment) {
+  const file = attachment.path.split('/').pop() || attachment.path;
+  if (attachment.startLine == null) return file;
+  if (attachment.endLine === attachment.startLine) return `${file}:${attachment.startLine}`;
+  return `${file}:${attachment.startLine}-${attachment.endLine}`;
+}
+
+function renderOverviewPreviewAttachments() {
+  const container = $('#overview-task-preview-chat-attachments');
+  if (!container) return;
+
+  if (!overviewPreviewAttachments.length) {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+
+  container.hidden = false;
+  container.innerHTML = overviewPreviewAttachments.map((attachment) => `
+    <span class="chat-attachment-chip">
+      <span class="chat-attachment-icon">${iconHtml('file-text', { size: 12, className: 'lucide-icon' })}</span>
+      <span class="chat-attachment-label">${escapeHtml(formatOverviewAttachmentLabel(attachment))}</span>
+      <button type="button" class="chat-attachment-remove" data-attachment-id="${attachment.id}" aria-label="Remove attachment">
+        ${iconHtml('x', { size: 12, className: 'lucide-icon' })}
+      </button>
+    </span>
+  `).join('');
+
+  container.querySelectorAll('.chat-attachment-remove').forEach((btn) => {
+    btn.addEventListener('click', () => removeOverviewPreviewAttachment(btn.dataset.attachmentId));
+  });
+
+  initIcons(container);
+}
+
+function addOverviewPreviewAttachment(attachment) {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  overviewPreviewAttachments.push({ ...attachment, id });
+  renderOverviewPreviewAttachments();
+  $('#overview-task-preview-chat-input')?.focus();
+}
+
+function removeOverviewPreviewAttachment(id) {
+  overviewPreviewAttachments = overviewPreviewAttachments.filter((a) => a.id !== id);
+  renderOverviewPreviewAttachments();
+}
+
+function clearOverviewPreviewAttachments() {
+  overviewPreviewAttachments = [];
+  renderOverviewPreviewAttachments();
+}
+
+async function handleOverviewPreviewChat(text) {
+  const task = getTask(overviewPreviewTaskId);
+  if (!task || task.status === 'backlog') return;
+
+  const refs = overviewPreviewAttachments.map(formatOverviewAttachmentLabel);
+  const messageText = text.trim()
+    ? (refs.length ? `${text.trim()} (${refs.join(', ')})` : text.trim())
+    : (refs.length ? `About ${refs.join(', ')}` : text.trim());
+
+  task.chat = task.chat || [];
+  task.chat.push({ role: 'user', text: messageText });
+  clearOverviewPreviewAttachments();
+
+  const input = $('#overview-task-preview-chat-input');
+  if (input) input.value = '';
+
+  const container = $('#overview-task-preview-chat');
+  if (container) {
+    fillOverviewTaskPreviewChat(container, task);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  await sleep(600 + Math.random() * 400);
+
+  const replySteps = [{
+    type: 'text',
+    dot: 'gray',
+    html: `<p>Looking at <strong>${escapeHtml(task.title)}</strong>. I'll fold this into the task thread — open the full task to execute changes.</p>`,
+  }];
+  task.chat.push({ role: 'agent', steps: replySteps });
+
+  if (container) {
+    fillOverviewTaskPreviewChat(container, task);
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
 /* ── Task Sidebar ── */
 function sidebarItemActionsHtml() {
   return `<div class="sidebar-item-actions">
@@ -10522,11 +10737,6 @@ function initEvents() {
     showSnackbar('Create workspace is not available in this prototype.');
   });
 
-  $('#close-task-btn').addEventListener('click', () => {
-    const task = getTask(activeTaskId);
-    if (task) closeTask(task);
-  });
-
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overviewArchiveOpen) {
       e.preventDefault();
@@ -10772,7 +10982,8 @@ function init() {
   renderAppModeTabBadges();
   initWorkTabs();
   initBrowserPreview();
-  initDiffCommitMenu();
+  initDiffCommitMenu({ wrap: $('#diff-commit-select-wrap') });
+  initDiffSelectionPopover();
   initSnackbar();
   initModeAttentionSimulation();
   initWorkspaceStatsMenus();
